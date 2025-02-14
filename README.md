@@ -6,9 +6,6 @@ Antwise is an AI-powered fintech application designed to enhance financial liter
 - Savings challenges with progress indicators
 - Integration with dummy backend data to simulate real-time financial management
 
-## GitHub Repository
-[Antwise Repository](https://github.com/yourusername/antwise) *(Replace with actual link)*
-
 ## Website
 To learn more about Antwise, visit [antwise.app](https://antwise.app).  
 The web repository is available at [GitHub](https://github.com/thedavidemmanuel/antwise-web).
@@ -41,9 +38,9 @@ The web repository is available at [GitHub](https://github.com/thedavidemmanuel/
 
 ## Designs & Interface
 - **Wireframes / Mockups:**  
-  [Figma Prototype](https://www.figma.com/file/...) *(Replace with actual link)*
+  [Figma Prototype](https://www.figma.com/design/YNLgFJsCiITtIIET21cgZt/Antwise?node-id=115-362&t=X9TztVyixHqit6mo-1)  
 - **Screenshots:**  
-  ![Home Screen](path-to-home-screen-screenshot.png) *(Replace with actual image link)*
+  ![alt text](home-screen.png)
 
 ## Deployment Plan
 - **Development:** Run locally using Expo’s development server.
@@ -51,7 +48,7 @@ The web repository is available at [GitHub](https://github.com/thedavidemmanuel/
 - **Future Enhancements:** API integration, detailed analytics, and refinements based on feedback.
 
 ## Video Demonstration
-[Watch the Demo](https://youtu.be/somevideolink) *(Replace with actual link – Duration: 5-10 minutes)*
+[Watch the Demo](https://www.loom.com/share/6ed36643087748d5ac5f443e4db3b8da?sid=fa3e9e5a-3e56-45c8-8dcd-8998184c79de)
 
 ## Functionality Highlights
 - **Frontend Development:**
