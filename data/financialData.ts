@@ -4,9 +4,14 @@ export interface PeriodData {
   out: number;
 }
 
+export interface FinancialPeriodData {
+  date: string;
+  amount: number;
+}
+
 export interface FinancialData {
-  moneyIn: Array<{ date: string; amount: number }>;
-  moneyOut: Array<{ date: string; amount: number }>;
+  moneyIn: FinancialPeriodData[];
+  moneyOut: FinancialPeriodData[];
   week: {
     periodData: PeriodData[];
   };
@@ -14,20 +19,17 @@ export interface FinancialData {
 
 export const mockFinancialData: FinancialData = {
   moneyIn: [
-    { date: '2024-02-05', amount: 150000 },
-    { date: '2024-02-06', amount: 210000 },
-    // ...more data
+    { date: '2024-02-01', amount: 150000 },
+    { date: '2024-02-02', amount: 210000 },
   ],
   moneyOut: [
-    { date: '2024-02-05', amount: 75000 },
-    { date: '2024-02-06', amount: 80000 },
-    // ...more data
+    { date: '2024-02-01', amount: 75000 },
+    { date: '2024-02-02', amount: 530000 },
   ],
   week: {
     periodData: [
-      { date: '2024-02-05', in: 150000, out: 75000 },
-      { date: '2024-02-06', in: 210000, out: 80000 },
-      // ...more data
+      { date: '2024-02-01', in: 150000, out: 75000 },
+      { date: '2024-02-02', in: 210000, out: 530000 },
     ]
   }
 };

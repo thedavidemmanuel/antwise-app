@@ -1,8 +1,11 @@
+// components/BottomNavigation.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Dimensions, SafeAreaView } from 'react-native';
 import { Home, Wallet, CreditCard, BookOpen, Menu } from 'lucide-react-native';
-import { useRouter, useNavigation } from 'expo-router';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const navigationItems = [
   { icon: Home, label: 'Home', name: 'Dashboard' },
@@ -13,31 +16,70 @@ const navigationItems = [
 ] as const;
 
 export function BottomNavigation({ state, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+  const isAndroid = Platform.OS === 'android';
+  
+  // Calculate responsive dimensions
+  const tabWidth = SCREEN_WIDTH / navigationItems.length;
+  const iconSize = Math.min(Math.round(tabWidth * 0.2), 30); // Responsive icon size
+  
+  // Calculate bottom padding based on platform and safe area
+  const bottomPadding = isAndroid ? 8 : Math.max(insets.bottom, 20);
+  
+  // Calculate nav height including safe area
+  const navHeight = 56 + (isAndroid ? 0 : insets.bottom);
+
   return (
-    <View style={styles.container}>
-      {navigationItems.map((item, index) => {
-        const isActive = state?.index === index;
-        const IconComponent = item.icon;
-        return (
-          <TouchableOpacity
-            key={item.name}
-            style={styles.navItem}
-            onPress={() => navigation.navigate(item.name)}
-          >
-            <IconComponent
-              size={30}
-              color={isActive ? '#7C00FE' : '#989898'}
-              style={styles.icon}
-            />
-            <Text style={[
-              styles.label,
-              { color: isActive ? '#7C00FE' : '#989898' }
-            ]}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={[
+      styles.container,
+      {
+        height: navHeight,
+        paddingBottom: bottomPadding,
+      }
+    ]}>
+      <View style={styles.content}>
+        {navigationItems.map((item, index) => {
+          const isActive = state?.index === index;
+          const IconComponent = item.icon;
+          
+          // Calculate responsive margins
+          const marginHorizontal = Math.round(tabWidth * 0.1);
+          
+          return (
+            <TouchableOpacity
+              key={item.name}
+              style={[
+                styles.navItem,
+                {
+                  width: tabWidth,
+                  marginHorizontal: marginHorizontal,
+                }
+              ]}
+              onPress={() => navigation.navigate(item.name)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <IconComponent
+                size={iconSize}
+                color={isActive ? '#7C00FE' : '#989898'}
+                style={styles.icon}
+              />
+              <Text 
+                style={[
+                  styles.label,
+                  { 
+                    color: isActive ? '#7C00FE' : '#989898',
+                    fontSize: Math.min(Math.round(tabWidth * 0.12), 12) // Responsive font size
+                  }
+                ]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -48,25 +90,35 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 45,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 37,
     backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5E5',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 10,
+  },
+  content: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    height: 56, // Base height without safe area
   },
   navItem: {
-    width: 35,
-    height: 45,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    paddingVertical: 6,
   },
   icon: {
-    marginBottom: 0,
+    marginBottom: 4,
   },
   label: {
-    fontFamily: 'Inter',
-    fontSize: 12,
+    fontFamily: Platform.select({ ios: 'Inter', android: 'Inter-Regular' }),
     fontWeight: '600',
-    lineHeight: 15,
+    textAlign: 'center',
   },
 });
