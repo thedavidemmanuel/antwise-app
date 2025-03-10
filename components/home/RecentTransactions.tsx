@@ -62,7 +62,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   title: {
-    fontSize: 10,
+    fontSize: 14,
     fontWeight: '600',
     color: '#000000',
     fontFamily: 'Inter-SemiBold',
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   seeAll: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#7C00FE',
     fontFamily: 'Inter',
   },

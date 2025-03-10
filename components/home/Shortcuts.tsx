@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 type IconName = React.ComponentProps<typeof Feather>['name'];
 
@@ -22,6 +23,8 @@ const ShortcutItem: React.FC<ShortcutItemProps> = ({ icon, label, onPress }) => 
 };
 
 const Shortcuts: React.FC = () => {
+  const router = useRouter();
+  
   const shortcuts: Array<{ icon: IconName; label: string }> = [
     { icon: 'file-text', label: 'Pay Bills' },
     { icon: 'gift', label: 'Rewards' },
@@ -36,7 +39,16 @@ const Shortcuts: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Shortcuts</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Shortcuts</Text>
+        <TouchableOpacity 
+          onPress={() => router.push('/shortcuts' as any)}
+          style={styles.seeAllContainer}
+        >
+          <Text style={styles.seeAll}>See all</Text>
+          <Feather name="chevron-right" size={10} color="#7C00FE" />
+        </TouchableOpacity>
+      </View>
       <View style={styles.card}>
         <View style={styles.shortcutsContainer}>
           {shortcuts.map((shortcut, index) => (
@@ -57,11 +69,27 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 5,
+  },
   title: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#000000',
-    marginBottom: 8,
+    fontFamily: 'Inter-SemiBold',
+  },
+  seeAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  seeAll: {
+    fontSize: 12,
+    color: '#7C00FE',
     fontFamily: 'Inter',
   },
   card: {

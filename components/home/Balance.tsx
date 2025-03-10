@@ -53,7 +53,7 @@ const Balance: React.FC = () => {
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width * 0.92;
-const CARD_HEIGHT = 180;
+const CARD_HEIGHT = 140; // scaled down from 180
 
 const styles = StyleSheet.create({
   balanceCard: {
@@ -62,7 +62,8 @@ const styles = StyleSheet.create({
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     alignSelf: 'center',
-    marginTop: 20,
+    marginTop: 0,
+    marginBottom: -5,
   },
   contentContainer: {
     flex: 1,
@@ -73,30 +74,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: -5,
+    marginBottom: -4,
+    marginTop: -15,
   },
   totalBalanceTitle: {
-    fontSize: 16,
+    fontSize: 14, // scaled down from 16
     fontWeight: '500',
     color: '#FFFFFF',
     opacity: 0.9,
   },
   switchButton: {
-    padding: 4,
+    padding: 8, // increased from 4 to 8 for a larger button area
   },
   balanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 0,
+    marginBottom: 8,
   },
   currencyText: {
-    fontSize: 24,
+    fontSize: 18, // scaled down from 20
     fontWeight: '600',
     color: '#FFFFFF',
     marginRight: 8,
   },
   balanceAmount: {
-    fontSize: 40,
+    fontSize: 28, // scaled down from 35
     fontWeight: '600',
     color: '#FFFFFF',
   },
@@ -108,7 +111,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     width: 140,
-    height: 45,
+    height: 38, // scaled down from 45
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
     flexDirection: 'row',
@@ -133,7 +136,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   actionText: {
-    fontSize: 14,
+    fontSize: 12, // scaled down from 14
     fontWeight: '600',
     color: '#7C00FE',
     marginLeft: 2,

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, FlatList } from 'react-native';
-import MoneyFlowChart from '../../../components/MoneyFlowChart';
-import { weeklyData, monthlyData, yearlyData, Timeframe } from '../../../data/chartData';
+import MoneyFlowChart from '../../components/MoneyFlowChart';
+import { weeklyData, monthlyData, yearlyData, Timeframe } from '../../data/chartData';
 
 type MeasureCallback = (
   x: number,
@@ -151,13 +151,13 @@ const MoneyFlow: React.FC = () => {
 const styles = StyleSheet.create({
   moneyFlowSection: {
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 0,
   },
   moneyFlowHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   titleContainer: {
     flexDirection: 'row',
@@ -166,8 +166,9 @@ const styles = StyleSheet.create({
   moneyFlowTitle: {
     fontSize: 14,
     fontFamily: 'Inter-SemiBold',
+    fontWeight: '600',
     color: '#000000',
-    marginRight: 12,
+    marginLeft: -16,  // adjusted to be flush with the edge like the Shortcuts title
   },
   calendarIcon: {
     width: 12,
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   periodText: {
     fontSize: 12,
     fontFamily: 'Inter-Regular',
-    color: '#000000',
+    color: '#7C3AED',
     marginRight: 4,
   },
   arrowDown: {
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   moreInsights: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#7C3AED',
     fontFamily: 'Inter-SemiBold',
     marginRight: 4,

@@ -2,8 +2,17 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { Home, Wallet, CreditCard, BookOpen, Menu } from 'lucide-react-native';
+import { useAuth } from '@clerk/clerk-expo';
+import { Redirect } from 'expo-router';
 
 export default function TabsLayout() {
+  const { isSignedIn } = useAuth();
+
+  // Add authentication protection
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)/sign-in" />;
+  }
+
   return (
     <Tabs
       screenOptions={{
