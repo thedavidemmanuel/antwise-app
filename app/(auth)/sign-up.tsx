@@ -12,10 +12,14 @@ export default function SignupScreen() {
     const router = useRouter();
 
     // Form refs for better keyboard navigation
+    const firstNameRef = useRef<TextInput>(null);
+    const lastNameRef = useRef<TextInput>(null);
     const emailRef = useRef<TextInput>(null);
     const passwordRef = useRef<TextInput>(null);
     const confirmPasswordRef = useRef<TextInput>(null);
 
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,6 +32,8 @@ export default function SignupScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     // Add field-specific error states
+    const [firstNameError, setFirstNameError] = useState('');
+    const [lastNameError, setLastNameError] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
 
@@ -45,11 +51,23 @@ export default function SignupScreen() {
     // Handle submission of sign-up form
     const onSignUpPress = async () => {
         // Reset error states
+        setFirstNameError('');
+        setLastNameError('');
         setEmailError('');
         setPasswordError('');
         
         // Client-side validation
         let isValid = true;
+        
+        if (!firstName.trim()) {
+            setFirstNameError('First name is required');
+            isValid = false;
+        }
+        
+        if (!lastName.trim()) {
+            setLastNameError('Last name is required');
+            isValid = false;
+        }
         
         if (!email) {
             setEmailError('Email is required');
@@ -87,7 +105,12 @@ export default function SignupScreen() {
                 email: email,
                 password: password,
                 options: {
-                    emailRedirectTo: REDIRECT_URL
+                    emailRedirectTo: REDIRECT_URL,
+                    data: {
+                        first_name: firstName,
+                        last_name: lastName,
+                        full_name: `${firstName} ${lastName}`
+                    }
                 }
             });
 
@@ -153,6 +176,44 @@ export default function SignupScreen() {
             <ScrollView contentContainerStyle={{flexGrow: 1}}>
                 <View style={styles.container}>
                     <Text style={styles.title}>Shall we begin?</Text>
+
+                    {/* First Name Field */}
+                    <Text style={styles.label}>First Name</Text>
+                    <TextInput
+                        ref={firstNameRef}
+                        style={[styles.input, firstNameError ? styles.inputError : null]}
+                        placeholder="Your first name"
+                        placeholderTextColor="rgba(0, 0, 0, 0.3)"
+                        value={firstName}
+                        onChangeText={(text) => {
+                            setFirstName(text);
+                            setFirstNameError('');
+                        }}
+                        autoCapitalize="words"
+                        returnKeyType="next"
+                        onSubmitEditing={() => lastNameRef.current?.focus()}
+                        blurOnSubmit={false}
+                    />
+                    {firstNameError ? <Text style={styles.errorText}>{firstNameError}</Text> : null}
+
+                    {/* Last Name Field */}
+                    <Text style={styles.label}>Last Name</Text>
+                    <TextInput
+                        ref={lastNameRef}
+                        style={[styles.input, lastNameError ? styles.inputError : null]}
+                        placeholder="Your last name"
+                        placeholderTextColor="rgba(0, 0, 0, 0.3)"
+                        value={lastName}
+                        onChangeText={(text) => {
+                            setLastName(text);
+                            setLastNameError('');
+                        }}
+                        autoCapitalize="words"
+                        returnKeyType="next"
+                        onSubmitEditing={() => emailRef.current?.focus()}
+                        blurOnSubmit={false}
+                    />
+                    {lastNameError ? <Text style={styles.errorText}>{lastNameError}</Text> : null}
 
                     <Text style={styles.label}>Email</Text>
                     <TextInput

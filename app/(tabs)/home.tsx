@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useSession } from '@/app/_layout'; // Replace Clerk's useUser with our session context
+import { useSession } from '@/app/_layout';
+import { supabase } from '@/lib/supabase';
 import Balance from '@/components/home/Balance';
 import Shortcuts from '@/components/home/Shortcuts';
 import MoneyFlow from '@/components/home/MoneyFlow';
@@ -20,12 +21,65 @@ import LeaderboardCard from '@/components/home/LeaderboardCard';
 
 const Home: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { session } = useSession(); // Use our Supabase session context
+  const { session } = useSession();
+  const [firstName, setFirstName] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Get user's email for greeting from Supabase session 
-  const userEmail = session?.user?.email || 'there';
-  // Extract the name part from email (before the @)
-  const userName = userEmail.split('@')[0];
+  useEffect(() => {
+    // Fetch user profile data when component mounts
+    const fetchUserProfile = async () => {
+      if (!session?.user) return;
+      
+      try {
+        // First try to get the first name from user metadata
+        const { data: userData } = await supabase.auth.getUser();
+        
+        // Check if first_name is in user metadata
+        if (userData?.user?.user_metadata?.first_name) {
+          setFirstName(userData.user.user_metadata.first_name);
+          setIsLoading(false);
+          return;
+        }
+        
+        // If not in metadata, try fetching from profiles table
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          setIsLoading(false);
+          return;
+        }
+        
+        if (profileData?.first_name) {
+          setFirstName(profileData.first_name);
+        } else {
+          // Fallback to username or email
+          const email = session.user.email || '';
+          const username = email.split('@')[0];
+          setFirstName(username);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [session]);
+
+  // Format greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -43,7 +97,9 @@ const Home: React.FC = () => {
             <View style={styles.profileIcon}>
               <Feather name="user" size={24} color="#FFF" />
             </View>  
-            <Text style={styles.greetingText}>Hi, {userName.toUpperCase()}</Text>
+            <Text style={styles.greetingText}>
+              {isLoading ? 'Loading...' : `${getGreeting()}, ${firstName || 'there'}`}
+            </Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => console.log('Notification pressed')}>
