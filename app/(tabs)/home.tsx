@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useUser } from '@clerk/clerk-expo'; // Add this import
+import { useSession } from '@/app/_layout'; // Replace Clerk's useUser with our session context
 import Balance from '@/components/home/Balance';
 import Shortcuts from '@/components/home/Shortcuts';
 import MoneyFlow from '@/components/home/MoneyFlow';
@@ -20,13 +20,12 @@ import LeaderboardCard from '@/components/home/LeaderboardCard';
 
 const Home: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const { user } = useUser(); // Get user data from Clerk
+  const { session } = useSession(); // Use our Supabase session context
 
-  // Get user's first name or email for greeting
-  const userName = user?.firstName || 
-                  user?.fullName?.split(' ')[0] || 
-                  user?.emailAddresses[0]?.emailAddress?.split('@')[0] || 
-                  'there';
+  // Get user's email for greeting from Supabase session 
+  const userEmail = session?.user?.email || 'there';
+  // Extract the name part from email (before the @)
+  const userName = userEmail.split('@')[0];
 
   return (
     <SafeAreaView style={styles.safeArea}>

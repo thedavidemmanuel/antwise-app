@@ -1,15 +1,23 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
-import { useSignIn } from '@clerk/clerk-expo';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, AppState } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
+
+// Setup auto-refresh for Supabase auth
+AppState.addEventListener('change', (state) => {
+  if (state === 'active') {
+    supabase.auth.startAutoRefresh();
+  } else {
+    supabase.auth.stopAutoRefresh();
+  }
+});
 
 const { width, height } = Dimensions.get('window');
 const scale = Math.min(width / 375, height / 812);
 const scaledSize = (size: number) => size * scale;
 
 export default function SignInScreen() {
-  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
 
   const [email, setEmail] = useState('');
@@ -42,45 +50,41 @@ export default function SignInScreen() {
 
   // Handle the submission of the sign-in form
   const onSignInPress = useCallback(async () => {
-    if (!isLoaded || !validateForm()) return;
+    if (!validateForm()) return;
 
     setLoading(true);
     
     try {
-      const signInAttempt = await signIn.create({
-        identifier: email,
-        password,
+      // Using Supabase authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
       });
 
-      if (signInAttempt.status === 'complete') {
-        // This indicates the user is signed in
-        await setActive({ session: signInAttempt.createdSessionId });
+      if (error) {
+        // Handle different error types
+        if (error.message.includes('Invalid login credentials')) {
+          setPasswordError('Incorrect email or password');
+        } else if (error.message.includes('Email not confirmed')) {
+          setEmailError('Please verify your email address');
+        } else {
+          // Generic error handling
+          setEmailError(error.message || 'An error occurred during sign in');
+        }
+        return;
+      }
+
+      if (data.session) {
+        // Successful sign in - redirect to home
         router.replace('/(tabs)/home');
-      } else {
-        // Handle other statuses if needed
-        console.log(`Sign-in status: ${signInAttempt.status}`);
       }
     } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));
-      
-      // Handle specific error codes
-      if (err.errors && err.errors[0]) {
-        const errorCode = err.errors[0].code;
-        const errorMessage = err.errors[0].message;
-        
-        if (errorCode === 'form_identifier_not_found') {
-          setEmailError('No account found with this email');
-        } else if (errorCode === 'form_password_incorrect') {
-          setPasswordError('Incorrect password');
-        } else {
-          // Generic error handling
-          setEmailError(errorMessage || 'An error occurred during sign in');
-        }
-      }
+      setEmailError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
-  }, [isLoaded, email, password]);
+  }, [email, password]);
 
   return (
     <View style={styles.container}>
@@ -240,8 +244,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginTop: 10,
-    height: 50, // Fixed height for button
-    justifyContent: 'center', // Center content vertically
+    height: 50,
+    justifyContent: 'center',
   },
   disabledButton: {
     opacity: 0.7,

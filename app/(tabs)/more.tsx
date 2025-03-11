@@ -12,7 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { useAuth, useUser } from '@clerk/clerk-expo';
+import { useSession } from '@/app/_layout'; // Replace Clerk hooks
+import { supabase } from '@/lib/supabase';
 
 // Option item component
 const OptionItem = ({ 
@@ -49,20 +50,24 @@ const OptionItem = ({
 export default function MoreScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user } = useUser();
-  const { signOut } = useAuth();
+  const { session } = useSession(); // Use our Supabase session
   const [isDarkMode, setIsDarkMode] = React.useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = React.useState(true);
   const [isBiometricEnabled, setIsBiometricEnabled] = React.useState(false);
   
   const handleSignOut = async () => {
     try {
-      await signOut();
-      router.replace('/' as any);
+      await supabase.auth.signOut();
+      // Router will automatically redirect to sign in through auth layout protection
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
+  
+  // Extract user info from session
+  const userEmail = session?.user?.email || 'user@example.com';
+  // Extract name from email (if available)
+  const userDisplayName = userEmail.split('@')[0];
   
   return (
     <SafeAreaView style={styles.container}>
@@ -84,26 +89,17 @@ export default function MoreScreen() {
           onPress={() => router.push('/more/profile' as any)}
         >
           <View style={styles.profileInfo}>
-            <View style={styles.avatarContainer}>
-              {user?.imageUrl ? (
-                <Image 
-                  source={{ uri: user.imageUrl }} 
-                  style={styles.avatar} 
-                />
-              ) : (
-                <View style={styles.placeholderAvatar}>
-                  <Text style={styles.avatarInitial}>
-                    {user?.firstName?.charAt(0) || user?.lastName?.charAt(0) || 'U'}
-                  </Text>
-                </View>
-              )}
+            <View style={styles.placeholderAvatar}>
+              <Text style={styles.avatarInitial}>
+                {userDisplayName.charAt(0).toUpperCase()}
+              </Text>
             </View>
             
             <View style={styles.profileTextContainer}>
               <Text style={styles.profileName}>
-                {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'User'}
+                {userDisplayName}
               </Text>
-              <Text style={styles.profileEmail}>{user?.emailAddresses[0]?.emailAddress || 'user@example.com'}</Text>
+              <Text style={styles.profileEmail}>{userEmail}</Text>
             </View>
           </View>
           

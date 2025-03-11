@@ -2,14 +2,14 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { Home, Wallet, CreditCard, BookOpen, Menu } from 'lucide-react-native';
-import { useAuth } from '@clerk/clerk-expo';
 import { Redirect } from 'expo-router';
+import { useSession } from '../_layout'; // Use your custom session hook instead of Clerk's
 
 export default function TabsLayout() {
-  const { isSignedIn } = useAuth();
+  const { session } = useSession(); // Use the session from your context
 
   // Add authentication protection
-  if (!isSignedIn) {
+  if (!session) {
     return <Redirect href="/(auth)/sign-in" />;
   }
 

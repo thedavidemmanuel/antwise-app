@@ -1,14 +1,19 @@
-import { Redirect, Stack } from 'expo-router'
-import { useAuth } from '@clerk/clerk-expo'
+import { Redirect, Stack } from 'expo-router';
+import { useSession } from '../_layout';
 
 export default function AuthRoutesLayout() {
-  const { isSignedIn } = useAuth()
+  const { session, initialized } = useSession();
 
-  if (isSignedIn) {
-    // Ensure this matches the path we're using for successful sign-in
-    return <Redirect href={'/(tabs)/home'} /> 
+  // Wait for auth to initialize before redirecting
+  if (!initialized) {
+    return null;
+  }
+
+  // If the user is authenticated, redirect to home
+  if (session) {
+    return <Redirect href={'/(tabs)/home'} />;
   }
 
   // Hide header on all auth screens
-  return <Stack screenOptions={{ headerShown: false }} />
+  return <Stack screenOptions={{ headerShown: false }} />;
 }

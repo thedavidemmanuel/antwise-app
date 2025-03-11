@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/splash-icon.png", // using splash icon for app icon
-    "scheme": "myapp",
+    "scheme": "antwiseapp", // Custom URL scheme for deep linking
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -35,6 +35,12 @@
         }
       ]
     ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    },
+    "owner": "your-expo-username",
     "experiments": {
       "typedRoutes": true
     }

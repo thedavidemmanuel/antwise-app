@@ -1,15 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Platform, Alert, ActivityIndicator, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSignUp } from '@clerk/clerk-expo';
 import { Feather } from '@expo/vector-icons';
+import { supabase, REDIRECT_URL } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 const scale = Math.min(width / 375, height / 812);
 const scaledSize = (size: number) => size * scale;
 
 export default function SignupScreen() {
-    const { isLoaded, signUp, setActive } = useSignUp();
     const router = useRouter();
 
     // Form refs for better keyboard navigation
@@ -23,12 +22,10 @@ export default function SignupScreen() {
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
-    const [pendingVerification, setPendingVerification] = useState(false);
-    const [code, setCode] = useState('');
+    const [emailSent, setEmailSent] = useState(false);
     
     // Add loading states
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isVerifying, setIsVerifying] = useState(false);
     
     // Add field-specific error states
     const [emailError, setEmailError] = useState('');
@@ -47,8 +44,6 @@ export default function SignupScreen() {
 
     // Handle submission of sign-up form
     const onSignUpPress = async () => {
-        if (!isLoaded) return;
-        
         // Reset error states
         setEmailError('');
         setPasswordError('');
@@ -87,139 +82,63 @@ export default function SignupScreen() {
         setIsSubmitting(true);
         
         try {
-            // Create user with just email and password
-            await signUp.create({
-                emailAddress: email,
-                password,
+            // Create user with Supabase
+            const { data, error } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+                options: {
+                    emailRedirectTo: REDIRECT_URL
+                }
             });
 
-            // Send user an email with verification code
-            await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-            setPendingVerification(true);
+            if (error) {
+                if (error.message.includes('already registered')) {
+                    setEmailError('This email is already registered');
+                } else {
+                    Alert.alert(
+                        "Sign Up Error", 
+                        error.message || "An error occurred during sign up"
+                    );
+                }
+                return;
+            }
+
+            // For Supabase, if email confirmation is enabled,
+            // the user will receive an email with a link to confirm their account
+            if (data) {
+                setEmailSent(true);
+                Alert.alert('Success', 'Please check your email for a verification link to complete your registration.');
+            }
         } catch (err: any) {
             console.error(JSON.stringify(err, null, 2));
-            
-            // Handle specific error cases
-            if (err.errors && err.errors[0]?.code === 'form_identifier_exists') {
-                setEmailError('This email is already registered');
-            } else if (err.errors && err.errors[0]?.code === 'form_password_pwned') {
-                setPasswordError('This password has been compromised. Please use a stronger password.');
-            } else {
-                Alert.alert(
-                    "Sign Up Error", 
-                    err.errors?.[0]?.message || "An error occurred during sign up"
-                );
-            }
+            Alert.alert(
+                "Sign Up Error", 
+                "An unexpected error occurred. Please try again."
+            );
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    // Handle submission of verification form
-    const onVerifyPress = async () => {
-        if (!isLoaded || !code.trim()) return;
-        
-        setIsVerifying(true);
-        
-        try {
-            // Use the code the user provided to attempt verification
-            const signUpAttempt = await signUp.attemptEmailAddressVerification({
-                code,
-            });
-
-            // If verification was completed, set the session to active and redirect
-            if (signUpAttempt.status === 'complete') {
-                await setActive({ session: signUpAttempt.createdSessionId });
-                router.replace('/(tabs)/home');
-            } else {
-                Alert.alert(
-                    "Verification Incomplete", 
-                    "Please check your verification code and try again."
-                );
-            }
-        } catch (err: any) {
-            console.error(JSON.stringify(err, null, 2));
-            
-            // Check for the specific "already verified" error code
-            if (err.errors && err.errors[0]?.code === 'verification_already_verified') {
-                try {
-                    // If already verified, attempt to complete the signup and get a session
-                    if (signUp.status === 'complete' && signUp.createdSessionId) {
-                        // If we have a session ID, set it active and continue
-                        await setActive({ session: signUp.createdSessionId });
-                        router.replace('/(tabs)/home');
-                    } else {
-                        // Otherwise redirect to sign in
-                        Alert.alert(
-                            "Already Verified",
-                            "Your email has been verified. Please sign in with your credentials.",
-                            [
-                                { text: "OK", onPress: () => router.replace('/(auth)/sign-in') }
-                            ]
-                        );
-                    }
-                } catch (sessionErr) {
-                    console.error("Error setting session:", sessionErr);
-                    router.replace('/(auth)/sign-in');
-                }
-            } else {
-                Alert.alert(
-                    "Verification Error", 
-                    err.errors?.[0]?.message || "An error occurred during verification. Please try again."
-                );
-            }
-        } finally {
-            setIsVerifying(false);
-        }
-    };
-
-    // Resend verification code
-    const handleResendCode = async () => {
-        if (!isLoaded) return;
-        
-        try {
-            await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-            Alert.alert('Success', 'A new verification code has been sent to your email');
-        } catch (err) {
-            console.error('Error resending code:', err);
-            Alert.alert('Error', 'Failed to resend verification code. Please try again.');
-        }
-    };
-
-    // Verification screen
-    if (pendingVerification) {
+    // Verification screen - with Supabase we show a message to check email
+    if (emailSent) {
         return (
             <View style={styles.container}>
-                <Text style={styles.title}>Verify Your Email</Text>
-                <Text style={styles.subtitle}>Please enter the verification code sent to {email}</Text>
+                <Text style={styles.title}>Check Your Email</Text>
+                <Text style={styles.subtitle}>We've sent a verification link to {email}</Text>
                 
-                <TextInput
-                    style={styles.input}
-                    placeholder="Enter verification code"
-                    placeholderTextColor="rgba(0, 0, 0, 0.3)"
-                    value={code}
-                    onChangeText={setCode}
-                    keyboardType="number-pad"
-                    autoCapitalize="none"
-                    autoFocus={true}
-                    maxLength={6}
-                />
+                <Text style={styles.subtitle}>Please check your inbox and click the link to verify your email address.</Text>
                 
                 <TouchableOpacity 
-                    style={[styles.continueButton, isVerifying && styles.disabledButton]}
-                    onPress={onVerifyPress}
-                    disabled={isVerifying || !code.trim()}>
-                    {isVerifying ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                        <Text style={styles.continueButtonText}>Verify</Text>
-                    )}
+                    style={styles.continueButton}
+                    onPress={() => router.replace('/(auth)/sign-in')}>
+                    <Text style={styles.continueButtonText}>Go to Sign In</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
                     style={styles.resendCodeButton}
-                    onPress={handleResendCode}>
-                    <Text style={styles.resendCodeText}>Resend verification code</Text>
+                    onPress={onSignUpPress}>
+                    <Text style={styles.resendCodeText}>Resend verification email</Text>
                 </TouchableOpacity>
             </View>
         );
