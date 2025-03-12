@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSignIn } from '@clerk/clerk-expo';
 import { Feather } from '@expo/vector-icons';
+import { supabase } from '../../lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 const scale = Math.min(width / 375, height / 812);
 const scaledSize = (size: number) => size * scale;
 
 export default function ResetScreen() {
-  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   
   // Form state
@@ -38,8 +37,6 @@ export default function ResetScreen() {
 
   // Request a password reset code by email
   const onRequestReset = async () => {
-    if (!isLoaded) return;
-    
     // Reset error state
     setEmailError('');
     
@@ -57,10 +54,12 @@ export default function ResetScreen() {
     setLoading(true);
     
     try {
-      await signIn.create({
-        strategy: 'reset_password_email_code',
-        identifier: email
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'yourapp://reset-password',
       });
+
+      if (error) throw error;
+      
       setEmailSent(true);
       
     } catch (err: any) {
@@ -78,8 +77,6 @@ export default function ResetScreen() {
 
   // Reset the password with the code and the new password
   const onReset = async () => {
-    if (!isLoaded) return;
-    
     // Reset error states
     setCodeError('');
     setPasswordError('');
@@ -105,14 +102,13 @@ export default function ResetScreen() {
     setLoading(true);
     
     try {
-      const result = await signIn.attemptFirstFactor({
-        strategy: 'reset_password_email_code',
-        code,
-        password
+      const { error } = await supabase.auth.updateUser({
+        email,
+        password,
       });
+
+      if (error) throw error;
       
-      // Set the user session active, which will log in the user automatically
-      await setActive({ session: result.createdSessionId });
       Alert.alert('Success', 'Password reset successfully!', [
         { text: 'OK', onPress: () => router.replace('/(tabs)/home') }
       ]);

@@ -1,14 +1,12 @@
-// app/(tabs)/_layout.tsx
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Home, Wallet, CreditCard, BookOpen, Menu } from 'lucide-react-native';
+import { Home, PiggyBank, CreditCard, GraduationCap, Grip } from 'lucide-react-native';
 import { Redirect } from 'expo-router';
-import { useSession } from '../_layout'; // Use your custom session hook instead of Clerk's
+import { useSession } from '../_layout';
 
 export default function TabsLayout() {
-  const { session } = useSession(); // Use the session from your context
+  const { session } = useSession();
 
-  // Add authentication protection
   if (!session) {
     return <Redirect href="/(auth)/sign-in" />;
   }
@@ -33,38 +31,38 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="home"
+        name="(home)"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <Home size={24} color={color} />
+          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="finances"
+        name="(finances)"
         options={{
           title: 'Finances',
-          tabBarIcon: ({ color }) => <Wallet size={24} color={color} />
+          tabBarIcon: ({ color }) => <PiggyBank size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="cards"
+        name="(cards)"
         options={{
           title: 'Cards',
-          tabBarIcon: ({ color }) => <CreditCard size={24} color={color} />
+          tabBarIcon: ({ color }) => <CreditCard size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="learn"
+        name="(learn)"
         options={{
           title: 'Learn',
-          tabBarIcon: ({ color }) => <BookOpen size={24} color={color} />
+          tabBarIcon: ({ color }) => <GraduationCap size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="more"
+        name="(more)"
         options={{
           title: 'More',
-          tabBarIcon: ({ color }) => <Menu size={24} color={color} />
+          tabBarIcon: ({ color }) => <Grip size={24} color={color} />,
         }}
       />
     </Tabs>
