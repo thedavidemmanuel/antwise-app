@@ -60,6 +60,9 @@ export default function RootLayout() {
     };
   }, []);
 
+  // Make sure any redirects to home use the proper route pattern
+  const redirect = session ? '/(tabs)/(home)' : '/(auth)/sign-in';
+
   // Show a loading indicator while initializing auth
   if (!initialized) {
     return (
