@@ -79,7 +79,10 @@ export default function LearnScreen() {
   const renderCourseItem = ({ item }: { item: typeof courses[0] }) => (
     <TouchableOpacity
       style={styles.courseCard}
-      onPress={() => router.push(`/learn/${item.id}` as any)} // updated cast
+      onPress={() => router.push({
+        pathname: '/(tabs)/(learn)/course-details',
+        params: { id: item.id }
+      } as any)}
       activeOpacity={0.9}
     >
       <View style={[styles.courseIconContainer, { backgroundColor: `${item.color}20` }]}>
@@ -122,7 +125,10 @@ export default function LearnScreen() {
           
           <TouchableOpacity 
             style={[styles.continueButton, { backgroundColor: item.color }]}
-            onPress={() => router.push(`/learn/${item.id}` as any)} // updated cast
+            onPress={() => router.push({
+              pathname: '/(tabs)/(learn)/course-details',
+              params: { id: item.id }
+            } as any)}
           >
             <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
@@ -149,7 +155,9 @@ export default function LearnScreen() {
         <Text style={styles.headerTitle}>Financial Education</Text>
         <TouchableOpacity
           style={styles.leaderboardButton}
-          onPress={() => router.push('/learn/leaderboard' as any)} // updated cast
+          onPress={() => router.push({
+            pathname: '/(tabs)/(learn)/leaderboard'
+          } as any)}
         >
           <Feather name="award" size={20} color="#7C00FE" />
         </TouchableOpacity>
@@ -177,7 +185,9 @@ export default function LearnScreen() {
         
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>My Courses</Text>
-          <TouchableOpacity onPress={() => console.log('View all courses')}>
+          <TouchableOpacity onPress={() => router.push({
+            pathname: '/(tabs)/(learn)/all-courses'
+          } as any)}>
             <Text style={styles.viewAllText}>View All</Text>
           </TouchableOpacity>
         </View>
@@ -192,7 +202,9 @@ export default function LearnScreen() {
         
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Financial Tips</Text>
-          <TouchableOpacity onPress={() => console.log('View all tips')}>
+          <TouchableOpacity onPress={() => router.push({
+            pathname: '/(tabs)/(learn)/all-tips'
+          } as any)}>
             <Text style={styles.viewAllText}>View All</Text>
           </TouchableOpacity>
         </View>
@@ -208,7 +220,9 @@ export default function LearnScreen() {
         
         <TouchableOpacity 
           style={styles.quizBanner}
-          onPress={() => console.log('Start daily quiz')}
+          onPress={() => router.push({
+            pathname: '/(tabs)/(learn)/daily-quiz'
+          } as any)}
         >
           <View style={styles.quizBannerContent}>
             <Feather name="help-circle" size={24} color="#FFFFFF" />

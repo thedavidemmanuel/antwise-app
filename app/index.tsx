@@ -93,14 +93,14 @@ export default function OnboardingScreen() {
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={styles.signInButton}
-          onPress={() => router.push("/(auth)/sign-in" as any)}
+          onPress={() => router.push("/(auth)/sign-in")}
         >
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.signUpButton}
-          onPress={() => router.push("/(auth)/sign-up" as any)}
+          onPress={() => router.push("/(auth)/sign-up")}
         >
           <Text style={styles.signUpText}>Sign Up</Text>
         </TouchableOpacity>

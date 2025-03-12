@@ -55,7 +55,7 @@ export default function ResetScreen() {
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'yourapp://reset-password',
+        redirectTo: `${window.location?.origin || ''}/reset-password`,
       });
 
       if (error) throw error;
@@ -110,7 +110,7 @@ export default function ResetScreen() {
       if (error) throw error;
       
       Alert.alert('Success', 'Password reset successfully!', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)/home') }
+        { text: 'OK', onPress: () => router.replace('/(tabs)/(home)') }
       ]);
       
     } catch (err: any) {

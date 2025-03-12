@@ -38,9 +38,9 @@ export default function ConfirmScreen() {
           router.replace('/(auth)/sign-in');
         }, 2000);
       } else if (type === 'recovery') {
-        // Handle password reset - fix type error by casting
+        // Handle password reset
         router.replace({
-          pathname: '/(auth)/reset' as any,
+          pathname: '/(auth)/reset',
           params: { token }
         });
       } else {

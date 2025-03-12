@@ -78,7 +78,10 @@ export default function FinancesScreen() {
     return (
       <TouchableOpacity
         style={styles.walletCard}
-        onPress={() => router.push(`/wallet/${item.id}` as any)}
+        onPress={() => router.push({
+          pathname: '/(tabs)/(finances)/wallet-details',
+          params: { id: item.id }
+        } as any)}
         activeOpacity={0.8}
       >
         <View style={styles.walletHeader}>
@@ -117,7 +120,9 @@ export default function FinancesScreen() {
         <Text style={styles.headerTitle}>Finances</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/finances/create-wallet' as any)}
+          onPress={() => router.push({
+            pathname: '/(tabs)/(finances)/create-wallet'
+          } as any)}
         >
           <Feather name="plus" size={20} color="#FFFFFF" />
         </TouchableOpacity>
@@ -158,7 +163,9 @@ export default function FinancesScreen() {
               </Text>
               <TouchableOpacity
                 style={styles.createWalletButton}
-                onPress={() => router.push('/finances/create-wallet' as any)}
+                onPress={() => router.push({
+                  pathname: '/(tabs)/(finances)/create-wallet'
+                } as any)}
               >
                 <Text style={styles.createWalletText}>Create Wallet</Text>
               </TouchableOpacity>

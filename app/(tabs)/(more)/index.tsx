@@ -86,7 +86,9 @@ export default function MoreScreen() {
         {/* Profile Section */}
         <TouchableOpacity 
           style={styles.profileSection}
-          onPress={() => router.push('/more/profile' as any)}
+          onPress={() => router.push({
+            pathname: '/(tabs)/(more)/profile'
+          } as any)}
         >
           <View style={styles.profileInfo}>
             <View style={styles.placeholderAvatar}>
@@ -115,28 +117,36 @@ export default function MoreScreen() {
               icon="user" 
               title="Profile" 
               subtitle="Manage your personal information"
-              onPress={() => router.push('/more/profile' as any)}
+              onPress={() => router.push({
+                pathname: '/(tabs)/(more)/profile'
+              } as any)}
             />
             
             <OptionItem 
               icon="shield" 
               title="Security" 
               subtitle="Password, biometrics & 2FA"
-              onPress={() => router.push('/more/security' as any)}
+              onPress={() => router.push({
+                pathname: '/(tabs)/(more)/security'
+              } as any)}
             />
             
             <OptionItem 
               icon="bell" 
               title="Notifications" 
               subtitle="Manage notification preferences"
-              onPress={() => router.push('/more/notifications' as any)}
+              onPress={() => router.push({
+                pathname: '/(tabs)/(more)/notifications'
+              } as any)}
             />
             
             <OptionItem 
               icon="settings" 
               title="Preferences" 
               subtitle="Language, currency, region"
-              onPress={() => router.push('/more/preferences' as any)}
+              onPress={() => router.push({
+                pathname: '/(tabs)/(more)/preferences'
+              } as any)}
             />
           </View>
         </View>
@@ -199,21 +209,27 @@ export default function MoreScreen() {
               icon="help-circle" 
               title="Help Center" 
               subtitle="FAQs and support articles"
-              onPress={() => router.push('/more/help' as any)}
+              onPress={() => router.push({
+                pathname: '/(tabs)/(more)/help'
+              } as any)}
             />
             
             <OptionItem 
               icon="message-circle" 
               title="Contact Support" 
               subtitle="Get help with your issues"
-              onPress={() => router.push('/more/contact' as any)}
+              onPress={() => router.push({
+                pathname: '/(tabs)/(more)/contact'
+              } as any)}
             />
             
             <OptionItem 
               icon="info" 
               title="About" 
               subtitle="App version and legal information"
-              onPress={() => router.push('/more/about' as any)}
+              onPress={() => router.push({
+                pathname: '/(tabs)/(more)/about'
+              } as any)}
             />
           </View>
         </View>

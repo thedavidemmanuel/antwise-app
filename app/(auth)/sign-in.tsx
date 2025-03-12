@@ -75,8 +75,10 @@ export default function SignInScreen() {
       }
 
       if (data.session) {
-        // Successful sign in - redirect to home
-        router.replace('/(tabs)/home');
+        // Successful sign in - redirect to home located at app/(tabs)/(home)/index.tsx
+        router.replace({
+          pathname: '/(tabs)/(home)'
+        } as any);
       }
     } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));

@@ -145,7 +145,10 @@ export default function CardsScreen() {
       >
         <TouchableOpacity
           style={styles.cardTouchable}
-          onPress={() => router.push(`/cards/${item.id}` as any)}
+          onPress={() => router.push({ 
+            pathname: "/(tabs)/(cards)/card-details", 
+            params: { id: item.id } 
+          } as any)}
           activeOpacity={0.9}
         >
           <LinearGradient
@@ -238,7 +241,7 @@ export default function CardsScreen() {
         <Text style={styles.headerTitle}>My Cards</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/cards/add' as any)}
+          onPress={() => router.push("/(tabs)/(cards)/add-card" as any)}
         >
           <Feather name="plus" size={20} color="#FFFFFF" />
         </TouchableOpacity>
@@ -276,21 +279,36 @@ export default function CardsScreen() {
       
       {/* Reduced space between card indicators and action buttons */}
       <View style={styles.actionButtonsContainer}>
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => router.push({ 
+            pathname: "/(tabs)/(cards)/freeze-card", 
+            params: { id: cards[activeCardIndex].id } 
+          } as any)}>
           <View style={styles.actionIconContainer}>
             <Feather name="lock" size={20} color="#7C00FE" />
           </View>
           <Text style={styles.actionButtonText}>Freeze</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => router.push({ 
+            pathname: "/(tabs)/(cards)/card-settings", 
+            params: { id: cards[activeCardIndex].id } 
+          } as any)}>
           <View style={styles.actionIconContainer}>
             <Feather name="settings" size={20} color="#7C00FE" />
           </View>
           <Text style={styles.actionButtonText}>Settings</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => router.push({ 
+            pathname: "/(tabs)/(cards)/card-details", 
+            params: { id: cards[activeCardIndex].id } 
+          } as any)}>
           <View style={styles.actionIconContainer}>
             <Feather name="eye" size={20} color="#7C00FE" />
           </View>
@@ -303,7 +321,7 @@ export default function CardsScreen() {
           <Text style={styles.transactionsTitle}>Recent Transactions</Text>
           <TouchableOpacity 
             style={styles.viewAllButton}
-            onPress={() => console.log('View all transactions')}
+            onPress={() => router.push("/(tabs)/(cards)/transactions" as any)}
           >
             <Text style={styles.viewAllText}>View All</Text>
             <Feather name="chevron-right" size={16} color="#7C00FE" />
