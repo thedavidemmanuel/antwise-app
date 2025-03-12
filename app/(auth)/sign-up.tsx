@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Platfo
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { supabase, REDIRECT_URL } from '@/lib/supabase';
+import { storeUserDetails, markOnboardingSeen } from '@/lib/storage';
 
 const { width, height } = Dimensions.get('window');
 const scale = Math.min(width / 375, height / 812);
@@ -126,6 +127,11 @@ export default function SignupScreen() {
                 return;
             }
 
+            // Store user details for welcome-back screen
+            await storeUserDetails(email, firstName, lastName);
+            // Mark onboarding as seen since user has completed signup
+            await markOnboardingSeen();
+            
             // For Supabase, if email confirmation is enabled,
             // the user will receive an email with a link to confirm their account
             if (data) {

@@ -7,6 +7,11 @@
     "icon": "./assets/images/splash-icon.png",
     "scheme": "antwiseapp",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#7C00FE"
+    },
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true

@@ -11,7 +11,7 @@ export default function AuthRoutesLayout() {
 
   // If the user is authenticated, redirect to home
   if (session) {
-    return <Redirect href={'/(tabs)/home'} />;
+    return <Redirect href={'/(tabs)/(home)'} />;
   }
 
   // Hide header on all auth screens

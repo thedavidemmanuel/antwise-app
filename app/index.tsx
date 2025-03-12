@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions, Platform, FlatList } from 'react-native';
 import { useRouter } from 'expo-router';
+import { markOnboardingSeen } from '@/lib/storage';
 
 const { width, height } = Dimensions.get('window');
 const scale = Math.min(width / 375, height / 812);
@@ -58,6 +59,17 @@ export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
 
+  // Handle navigation with onboarding completion
+  const handleSignIn = async () => {
+    await markOnboardingSeen();
+    router.replace("/(auth)/sign-in");
+  };
+
+  const handleSignUp = async () => {
+    await markOnboardingSeen();
+    router.replace("/(auth)/sign-up");
+  };
+
   const renderSlide = ({ item }: { item: Slide }) => (
     <View style={[styles.container, { width }]}>
       <Image 
@@ -93,14 +105,14 @@ export default function OnboardingScreen() {
       <View style={styles.buttonContainer}>
         <TouchableOpacity 
           style={styles.signInButton}
-          onPress={() => router.push("/(auth)/sign-in")}
+          onPress={handleSignIn}
         >
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.signUpButton}
-          onPress={() => router.push("/(auth)/sign-up")}
+          onPress={handleSignUp}
         >
           <Text style={styles.signUpText}>Sign Up</Text>
         </TouchableOpacity>

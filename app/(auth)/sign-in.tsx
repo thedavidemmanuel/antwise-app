@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Dimensions, Activi
 import { Link, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { storeUserDetails } from '@/lib/storage';
 
 // Setup auto-refresh for Supabase auth
 AppState.addEventListener('change', (state) => {
@@ -75,10 +76,16 @@ export default function SignInScreen() {
       }
 
       if (data.session) {
+        // Store user details for welcome-back screen
+        let firstName = data.user?.user_metadata?.first_name || '';
+        let lastName = data.user?.user_metadata?.last_name || '';
+        
+        if (firstName) {
+          await storeUserDetails(email, firstName, lastName);
+        }
+        
         // Successful sign in - redirect to home located at app/(tabs)/(home)/index.tsx
-        router.replace({
-          pathname: '/(tabs)/(home)'
-        } as any);
+        router.replace('/(tabs)/(home)' as any);
       }
     } catch (err: any) {
       console.error(JSON.stringify(err, null, 2));
