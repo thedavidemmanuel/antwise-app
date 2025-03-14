@@ -257,6 +257,34 @@ export class TransactionService {
   }
 
   /**
+   * Get all transactions for a user with pagination
+   * @param userId The user ID
+   * @param limit Maximum number of transactions to return per page
+   * @param offset Number of transactions to skip (for pagination)
+   * @returns Array of transactions
+   */
+  static async getAllTransactions(userId: string, limit: number = 20, offset: number = 0): Promise<Transaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('transaction_date', { ascending: false })
+        .range(offset, offset + limit - 1);
+        
+      if (error) {
+        console.error('Error fetching all transactions:', error);
+        return [];
+      }
+      
+      return data as Transaction[];
+    } catch (err) {
+      console.error('Error in getAllTransactions:', err);
+      return [];
+    }
+  }
+
+  /**
    * Format date for display in the UI
    */
   static formatTransactionDate(dateString: string): string {

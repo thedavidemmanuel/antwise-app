@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
 import { TransactionService } from '@/services/TransactionService';
-import { refreshEvents } from '@/app/(tabs)/(home)/index';
+import { refreshEvents } from '@/utils/refreshEvents';
 
 interface BalanceProps {
   refreshTrigger?: boolean;

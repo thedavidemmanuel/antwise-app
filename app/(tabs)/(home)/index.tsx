@@ -20,20 +20,7 @@ import RecentTransactions from '@/components/home/RecentTransactions';
 import LearnCard from '@/components/home/LearnCard';
 import LeaderboardCard from '@/components/home/LeaderboardCard';
 import { TransactionService } from '@/services/TransactionService';
-
-// Create a global refresh event that components can subscribe to
-export const refreshEvents = {
-  listeners: new Set<() => void>(),
-  
-  addListener(callback: () => void) {
-    this.listeners.add(callback);
-    return () => this.listeners.delete(callback);
-  },
-  
-  trigger() {
-    this.listeners.forEach(callback => callback());
-  }
-};
+import { refreshEvents } from '@/utils/refreshEvents';
 
 const Home: React.FC = () => {
   const insets = useSafeAreaInsets();

@@ -7,6 +7,7 @@ import { View, ActivityIndicator, Platform } from 'react-native';
 import { AppState } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import { getUserDetails, hasSeenOnboarding } from '@/lib/storage';
+import { setupAuthStateChangeListener } from '@/lib/auth-state-change';
 
 // Keep the splash screen visible while we fetch resources
 // This needs to be called at the root component level
@@ -74,6 +75,9 @@ export default function RootLayout() {
       setSession(session);
     });
 
+    // Setup dummy data generation for first sign-in
+    const dummyDataSubscription = setupAuthStateChangeListener();
+
     // Set up auto-refresh when app state changes - only for mobile
     let subscription1: any = null;
     if (Platform.OS !== 'web') {
@@ -89,6 +93,7 @@ export default function RootLayout() {
     // Clean up the subscription when unmounting
     return () => {
       subscription?.unsubscribe();
+      dummyDataSubscription?.data?.subscription?.unsubscribe();
       subscription1?.remove?.();
     };
   }, []);
@@ -113,13 +118,11 @@ export default function RootLayout() {
   // Make sure any redirects use the proper route pattern based on various states
   const determineInitialRoute = () => {
     if (session) {
-      return '(tabs)'; // Removed the leading slash
-    } else if (isReturningUser) {
-      return '(auth)/welcome-back';
+      return '(tabs)';
     } else if (hasSeenOnboardingScreen) {
-      return '(auth)/sign-in';
+      return '(auth)'; // Just navigate to (auth) and let the index handle the logic
     } else {
-      return 'index'; // Use 'index' instead of '/'
+      return 'index'; // This is your onboarding screen
     }
   };
 

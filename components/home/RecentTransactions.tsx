@@ -5,7 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSession } from '@/app/_layout';
 import { TransactionService, Transaction } from '@/services/TransactionService';
 import { supabase } from '@/lib/supabase';
-import { refreshEvents } from '@/app/(tabs)/(home)/index';
+import { refreshEvents } from '@/utils/refreshEvents';
 
 // Helper function to get icon based on transaction category
 const getCategoryIcon = (category: string): React.ComponentProps<typeof Feather>['name'] => {
