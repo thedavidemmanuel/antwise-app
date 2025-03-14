@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
-import { Home, PiggyBank, CreditCard, GraduationCap, Grip } from 'lucide-react-native';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faHouse, faPiggyBank, faCreditCard, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { Grip } from 'lucide-react-native';
 import { Redirect } from 'expo-router';
 import { useSession } from '../_layout';
 
@@ -34,28 +36,28 @@ export default function TabsLayout() {
         name="(home)"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesomeIcon icon={faHouse} color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="(finances)"
         options={{
           title: 'Finances',
-          tabBarIcon: ({ color }) => <PiggyBank size={24} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesomeIcon icon={faPiggyBank} color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="(cards)"
         options={{
           title: 'Cards',
-          tabBarIcon: ({ color }) => <CreditCard size={24} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesomeIcon icon={faCreditCard} color={color} size={24} />,
         }}
       />
       <Tabs.Screen
         name="(learn)"
         options={{
           title: 'Learn',
-          tabBarIcon: ({ color }) => <GraduationCap size={24} color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesomeIcon icon={faChartLine} color={color} size={24} />,
         }}
       />
       <Tabs.Screen
