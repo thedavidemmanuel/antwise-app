@@ -98,8 +98,6 @@ const MtnMomo = () => {
           return;
         }
         
-        // Remove this comment if you're intentionally using TransactionService
-        // but remove the updateWalletBalance function to avoid potential double-counting
         const numericAmount = parseFloat(amount);
         
         const success = await TransactionService.addMoneyToWallet(

@@ -84,6 +84,9 @@ export class TransactionService {
 
   /**
    * Add money to wallet and create a transaction record
+   * 
+   * This function uses a transaction to ensure both operations (updating wallet balance
+   * and creating transaction record) succeed or fail together.
    */
   static async addMoneyToWallet(
     userId: string,
@@ -118,28 +121,94 @@ export class TransactionService {
         return false;
       }
       
-      // Update wallet balance
-      const { error: updateError } = await supabase
-        .from('wallets')
-        .update({ 
-          balance: wallet.balance + amount,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', wallet.id);
-        
-      if (updateError) {
-        console.error('Error updating wallet balance:', updateError);
+      // Important: Ensure amount is a valid number and properly formatted
+      const validAmount = Number(amount);
+      if (isNaN(validAmount) || validAmount <= 0) {
+        console.error('Invalid amount:', amount);
         return false;
       }
       
-      // Create transaction record
+      console.log('Adding amount to wallet:', validAmount, 'Current balance:', wallet.balance);
+      const newBalance = wallet.balance + validAmount;
+      console.log('New balance will be:', newBalance);
+      
+      // Use a transaction to ensure both operations succeed or fail together
+      const { error } = await supabase.rpc('add_money_to_wallet', {
+        p_wallet_id: wallet.id,
+        p_amount: validAmount,
+        p_user_id: userId,
+        p_currency: wallet.currency,
+        p_merchant: transactionDetails.merchant || 'Deposit',
+        p_category: transactionDetails.category || 'Deposit',
+        p_description: transactionDetails.description || 'Money added to wallet'
+      });
+      
+      if (error) {
+        console.error('Error in transaction:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Error in addMoneyToWallet:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Fallback method for adding money when RPC is not available
+   */
+  static async addMoneyToWalletFallback(
+    userId: string,
+    amount: number,
+    walletId?: string,
+    transactionDetails: Partial<Transaction> = {}
+  ): Promise<boolean> {
+    try {
+      // Get wallet or create one if it doesn't exist
+      let wallet: Wallet | null;
+      
+      if (walletId) {
+        const { data, error } = await supabase
+          .from('wallets')
+          .select('*')
+          .eq('id', walletId)
+          .eq('user_id', userId)
+          .single();
+          
+        if (error) {
+          console.error('Error fetching specified wallet:', error);
+          return false;
+        }
+        
+        wallet = data as Wallet;
+      } else {
+        wallet = await this.getUserDefaultWallet(userId);
+      }
+      
+      if (!wallet) {
+        console.error('No wallet found or could not be created');
+        return false;
+      }
+      
+      // Important: Ensure amount is a valid number
+      const validAmount = Number(amount);
+      if (isNaN(validAmount) || validAmount <= 0) {
+        console.error('Invalid amount:', amount);
+        return false;
+      }
+      
+      const newBalance = wallet.balance + validAmount;
+      console.log('Adding to wallet:', validAmount, 'Current balance:', wallet.balance, 'New balance:', newBalance);
+      
+      // First create transaction record
       const { error: transactionError } = await supabase
         .from('transactions')
         .insert({
           user_id: userId,
           wallet_id: wallet.id,
           type: 'income',
-          amount: amount,
+          amount: validAmount,
           currency: wallet.currency,
           merchant: transactionDetails.merchant || 'Deposit',
           category: transactionDetails.category || 'Deposit',
@@ -150,12 +219,37 @@ export class TransactionService {
         
       if (transactionError) {
         console.error('Error creating transaction record:', transactionError);
-        // Still return true since the balance was updated
+        return false;
+      }
+      
+      // Then update wallet balance
+      const { error: updateError } = await supabase
+        .from('wallets')
+        .update({ 
+          balance: newBalance,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', wallet.id)
+        .eq('user_id', userId);
+        
+      if (updateError) {
+        console.error('Error updating wallet balance:', updateError);
+        // Try to rollback the transaction since we couldn't update the balance
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('user_id', userId)
+          .eq('wallet_id', wallet.id)
+          .eq('amount', validAmount)
+          .order('created_at', { ascending: false })
+          .limit(1);
+        
+        return false;
       }
       
       return true;
     } catch (err) {
-      console.error('Error in addMoneyToWallet:', err);
+      console.error('Error in addMoneyToWalletFallback:', err);
       return false;
     }
   }
@@ -179,7 +273,12 @@ export class TransactionService {
         return { balance: 0, currency: 'RWF' };
       }
       
-      const totalBalance = data.reduce((total, wallet) => total + wallet.balance, 0);
+      // Sum all wallet balances, ensuring numbers are properly converted
+      const totalBalance = data.reduce((total, wallet) => {
+        const walletBalance = Number(wallet.balance) || 0;
+        return total + walletBalance;
+      }, 0);
+      
       const currency = data[0].currency || 'RWF';
       
       return { balance: totalBalance, currency };
