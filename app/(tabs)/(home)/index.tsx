@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   SafeAreaView,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -18,13 +19,71 @@ import MoneyFlow from '@/components/home/MoneyFlow';
 import RecentTransactions from '@/components/home/RecentTransactions';
 import LearnCard from '@/components/home/LearnCard';
 import LeaderboardCard from '@/components/home/LeaderboardCard';
+import { TransactionService } from '@/services/TransactionService';
+
+// Create a global refresh event that components can subscribe to
+export const refreshEvents = {
+  listeners: new Set<() => void>(),
+  
+  addListener(callback: () => void) {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  },
+  
+  trigger() {
+    this.listeners.forEach(callback => callback());
+  }
+};
 
 const Home: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
   const [firstName, setFirstName] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
+  // Function to refresh all data on the home screen
+  const refreshHomeData = useCallback(async () => {
+    if (!session?.user) return;
+    
+    setRefreshing(true);
+    
+    try {
+      // Trigger the global refresh event for all components to refresh their data
+      refreshEvents.trigger();
+      
+      // Fetch user profile data
+      const { data: userData } = await supabase.auth.getUser();
+      
+      // Check if first_name is in user metadata
+      if (userData?.user?.user_metadata?.first_name) {
+        setFirstName(userData.user.user_metadata.first_name);
+      } else {
+        // If not in metadata, try fetching from profiles table
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('first_name')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profileData?.first_name) {
+          setFirstName(profileData.first_name);
+        } else {
+          // Fallback to username or email
+          const email = session.user.email || '';
+          const username = email.split('@')[0];
+          setFirstName(username);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing home data:', error);
+    } finally {
+      setRefreshing(false);
+      setIsLoading(false);
+    }
+  }, [session]);
+
+  // Initial data fetch
   useEffect(() => {
     // Fetch user profile data when component mounts
     const fetchUserProfile = async () => {
@@ -70,7 +129,29 @@ const Home: React.FC = () => {
     };
 
     fetchUserProfile();
-  }, [session]);
+    
+    // Listen for transaction changes to trigger a refresh
+    const transactionSubscription = supabase
+      .channel('transactions_refresh')
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'transactions', 
+          filter: `user_id=eq.${session?.user?.id}` 
+        },
+        () => {
+          // Delay the refresh slightly to ensure Supabase has time to process
+          setTimeout(() => refreshHomeData(), 1000);
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      transactionSubscription.unsubscribe();
+    };
+  }, [session, refreshHomeData]);
 
   // Format greeting based on time of day
   const getGreeting = () => {
@@ -90,6 +171,14 @@ const Home: React.FC = () => {
           { paddingTop: Math.max(16, insets.top) }
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshHomeData}
+            colors={['#7C00FE']}
+            tintColor="#7C00FE"
+          />
+        }
       >
         {/* Header */}
         <View style={styles.header}>
@@ -115,7 +204,7 @@ const Home: React.FC = () => {
         </View>
 
         <View style={styles.content}>
-          <Balance />
+          <Balance refreshTrigger={refreshing} />
           <View style={styles.sectionSpacing}>
             <Shortcuts />
           </View>
@@ -123,7 +212,7 @@ const Home: React.FC = () => {
             <MoneyFlow />
           </View>
           <View style={styles.sectionSpacing}>
-            <RecentTransactions />
+            <RecentTransactions refreshTrigger={refreshing} />
           </View>
           
           {/* Learning and Savings Leaderboard Cards Section */}

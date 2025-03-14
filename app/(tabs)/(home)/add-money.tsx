@@ -1,3 +1,4 @@
+// app/(tabs)/(home)/add-money.tsx
 import React from 'react';
 import {
   View,
@@ -5,13 +6,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image
+  Image,
+  SafeAreaView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHashtag, faBuildingColumns } from '@fortawesome/free-solid-svg-icons';
+import { useSession } from '@/app/_layout';
 
 const PaymentMethod = {
   BANK_TRANSFER: 'BANK_TRANSFER',
@@ -23,20 +23,22 @@ const PaymentMethod = {
 type PaymentMethodType = typeof PaymentMethod[keyof typeof PaymentMethod];
 
 const AddMoney = () => {
+  const { session } = useSession();
+
   const handleMethodSelected = (method: PaymentMethodType) => {
     // Navigate to the specific method screen
     switch (method) {
       case PaymentMethod.BANK_TRANSFER:
-        router.push("/methods/bank-transfer");
+        router.push("/(tabs)/(home)/methods/bank-transfer");
         break;
       case PaymentMethod.MTN_MOMO:
-        router.push("/methods/momo");
+        router.push("/(tabs)/(home)/methods/momo");
         break;
       case PaymentMethod.AIRTEL_MONEY:
-        router.push("/methods/bank-transfer");
+        router.push("/(tabs)/(home)/methods/bank-transfer");
         break;
       case PaymentMethod.USSD:
-        router.push("/methods/ussd");
+        router.push("/(tabs)/(home)/methods/ussd");
         break;
     }
   };
@@ -67,6 +69,7 @@ const AddMoney = () => {
       <Stack.Screen
         options={{
           headerTitle: 'Add Money',
+          headerShown: true,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()}>
               <Feather name="arrow-left" size={24} color="#000" />
@@ -83,7 +86,7 @@ const AddMoney = () => {
             {renderMethodItem(
               PaymentMethod.BANK_TRANSFER,
               'Bank Transfer',
-              <FontAwesomeIcon icon={faBuildingColumns} size={24} color="#555" />
+              <Feather name="link" size={24} color="#555" />
             )}
             
             {renderMethodItem(
@@ -92,25 +95,19 @@ const AddMoney = () => {
                 <Text style={styles.methodText}>Momo by </Text>
                 <Text style={[styles.methodText, { color: '#FFCC08' }]}>MTN</Text>
               </>,
-              <Image 
-                source={require('../../../assets/images/momo-icon.webp')} 
-                style={styles.methodLogo} 
-              />
+              <Feather name="smartphone" size={24} color="#FFCC08" />
             )}
             
             {renderMethodItem(
               PaymentMethod.AIRTEL_MONEY,
               'Airtel Money',
-              <Image 
-                source={require('../../../assets/images/airtel-money.png')} 
-                style={styles.methodLogo} 
-              />
+              <Feather name="smartphone" size={24} color="#FF0000" />
             )}
             
             {renderMethodItem(
               PaymentMethod.USSD,
               'USSD',
-              <FontAwesomeIcon icon={faHashtag} size={24} color="#555" />
+              <Feather name="hash" size={24} color="#555" />
             )}
           </View>
         </View>

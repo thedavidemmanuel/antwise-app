@@ -9,12 +9,17 @@ import {
   Modal,
   Alert,
   Keyboard,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import { useSession } from '@/app/_layout';
+import { TransactionService } from '@/services/TransactionService';
 
 const MtnMomo = () => {
+  const { session } = useSession();
   const [amount, setAmount] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('+250 790 139 249');
   const [showTransactionModal, setShowTransactionModal] = useState<boolean>(false);
@@ -22,6 +27,8 @@ const MtnMomo = () => {
   const [pin, setPin] = useState<string>('');
   const [keyboardVisible, setKeyboardVisible] = useState<boolean>(false);
   const [transactionOption, setTransactionOption] = useState<string>('');
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [userWallet, setUserWallet] = useState<any>(null);
 
   useEffect(() => {
     const keyboardDidShowListener = Keyboard.addListener(
@@ -33,11 +40,30 @@ const MtnMomo = () => {
       () => setKeyboardVisible(false)
     );
 
+    // Fetch user's default wallet when component mounts
+    if (session?.user?.id) {
+      fetchUserWallet();
+    }
+
     return () => {
       keyboardDidShowListener.remove();
       keyboardDidHideListener.remove();
     };
-  }, []);
+  }, [session]);
+
+  // Function to fetch user's default wallet
+  const fetchUserWallet = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      const wallet = await TransactionService.getUserDefaultWallet(session.user.id);
+      if (wallet) {
+        setUserWallet(wallet);
+      }
+    } catch (err) {
+      console.error('Error fetching wallet:', err);
+    }
+  };
 
   const handleContinue = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -59,14 +85,49 @@ const MtnMomo = () => {
     }
   };
 
-  const handlePinSubmit = () => {
+  const handlePinSubmit = async () => {
     if (pin.length === 4) {
       setShowPinModal(false);
-      Alert.alert(
-        'Transaction Successful',
-        'Your account has been credited with ' + amount + ' RWF',
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
+      setPin('');
+      
+      try {
+        setIsProcessing(true);
+        
+        if (!session?.user?.id) {
+          Alert.alert('Error', 'User not authenticated');
+          return;
+        }
+        
+        // Remove this comment if you're intentionally using TransactionService
+        // but remove the updateWalletBalance function to avoid potential double-counting
+        const numericAmount = parseFloat(amount);
+        
+        const success = await TransactionService.addMoneyToWallet(
+          session.user.id,
+          numericAmount,
+          userWallet?.id,
+          {
+            merchant: 'MTN Mobile Money',
+            category: 'Deposit',
+            description: 'Mobile money deposit'
+          }
+        );
+        
+        if (success) {
+          Alert.alert(
+            'Transaction Successful',
+            `Your account has been credited with ${amount} RWF`,
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        } else {
+          Alert.alert('Error', 'Transaction failed. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error processing transaction:', err);
+        Alert.alert('Error', 'An unexpected error occurred');
+      } finally {
+        setIsProcessing(false);
+      }
     } else {
       Alert.alert('Error', 'Please enter a valid 4-digit PIN');
     }
@@ -145,11 +206,15 @@ const MtnMomo = () => {
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.continueButton, !amount && styles.continueButtonDisabled]}
+            style={[styles.continueButton, (!amount || isProcessing) && styles.continueButtonDisabled]}
             onPress={handleContinue}
-            disabled={!amount}
+            disabled={!amount || isProcessing}
           >
-            <Text style={styles.continueText}>Continue</Text>
+            {isProcessing ? (
+              <ActivityIndicator color="#333" size="small" />
+            ) : (
+              <Text style={styles.continueText}>Continue</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -217,6 +282,7 @@ const MtnMomo = () => {
                 secureTextEntry
                 autoFocus={true}
                 maxLength={4}
+                keyboardType="numeric"
                 value={pin}
                 onChangeText={setPin}
                 onSubmitEditing={handlePinSubmit}
@@ -226,13 +292,17 @@ const MtnMomo = () => {
             <View style={styles.ussdActions}>
               <TouchableOpacity 
                 style={styles.ussdCancel}
-                onPress={() => setShowPinModal(false)}
+                onPress={() => {
+                  setShowPinModal(false);
+                  setPin('');
+                }}
               >
                 <Text style={styles.ussdCancelText}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.ussdSubmit}
+                style={[styles.ussdSubmit, pin.length !== 4 && styles.ussdSubmitDisabled]}
                 onPress={handlePinSubmit}
+                disabled={pin.length !== 4}
               >
                 <Text style={styles.ussdSubmitText}>SEND</Text>
               </TouchableOpacity>
