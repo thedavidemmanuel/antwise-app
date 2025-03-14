@@ -85,8 +85,7 @@ export class TransactionService {
   /**
    * Add money to wallet and create a transaction record
    * 
-   * This function uses a transaction to ensure both operations (updating wallet balance
-   * and creating transaction record) succeed or fail together.
+   * This function now uses the direct method instead of RPC to avoid potential duplicate updates
    */
   static async addMoneyToWallet(
     userId: string,
@@ -132,75 +131,7 @@ export class TransactionService {
       const newBalance = wallet.balance + validAmount;
       console.log('New balance will be:', newBalance);
       
-      // Use a transaction to ensure both operations succeed or fail together
-      const { error } = await supabase.rpc('add_money_to_wallet', {
-        p_wallet_id: wallet.id,
-        p_amount: validAmount,
-        p_user_id: userId,
-        p_currency: wallet.currency,
-        p_merchant: transactionDetails.merchant || 'Deposit',
-        p_category: transactionDetails.category || 'Deposit',
-        p_description: transactionDetails.description || 'Money added to wallet'
-      });
-      
-      if (error) {
-        console.error('Error in transaction:', error);
-        return false;
-      }
-      
-      return true;
-    } catch (err) {
-      console.error('Error in addMoneyToWallet:', err);
-      return false;
-    }
-  }
-
-  /**
-   * Fallback method for adding money when RPC is not available
-   */
-  static async addMoneyToWalletFallback(
-    userId: string,
-    amount: number,
-    walletId?: string,
-    transactionDetails: Partial<Transaction> = {}
-  ): Promise<boolean> {
-    try {
-      // Get wallet or create one if it doesn't exist
-      let wallet: Wallet | null;
-      
-      if (walletId) {
-        const { data, error } = await supabase
-          .from('wallets')
-          .select('*')
-          .eq('id', walletId)
-          .eq('user_id', userId)
-          .single();
-          
-        if (error) {
-          console.error('Error fetching specified wallet:', error);
-          return false;
-        }
-        
-        wallet = data as Wallet;
-      } else {
-        wallet = await this.getUserDefaultWallet(userId);
-      }
-      
-      if (!wallet) {
-        console.error('No wallet found or could not be created');
-        return false;
-      }
-      
-      // Important: Ensure amount is a valid number
-      const validAmount = Number(amount);
-      if (isNaN(validAmount) || validAmount <= 0) {
-        console.error('Invalid amount:', amount);
-        return false;
-      }
-      
-      const newBalance = wallet.balance + validAmount;
-      console.log('Adding to wallet:', validAmount, 'Current balance:', wallet.balance, 'New balance:', newBalance);
-      
+      // REPLACING RPC CALL WITH DIRECT OPERATIONS
       // First create transaction record
       const { error: transactionError } = await supabase
         .from('transactions')
@@ -249,9 +180,22 @@ export class TransactionService {
       
       return true;
     } catch (err) {
-      console.error('Error in addMoneyToWalletFallback:', err);
+      console.error('Error in addMoneyToWallet:', err);
       return false;
     }
+  }
+
+  /**
+   * Fallback method for adding money when RPC is not available
+   * This method is now maintained for backwards compatibility
+   */
+  static async addMoneyToWalletFallback(
+    userId: string,
+    amount: number,
+    walletId?: string,
+    transactionDetails: Partial<Transaction> = {}
+  ): Promise<boolean> {
+    return this.addMoneyToWallet(userId, amount, walletId, transactionDetails);
   }
 
   /**
