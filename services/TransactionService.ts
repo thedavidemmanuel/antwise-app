@@ -285,6 +285,38 @@ export class TransactionService {
   }
 
   /**
+   * Get transactions by date range
+   */
+  static async getTransactionsByDateRange(
+    userId: string, 
+    startDate: string, 
+    endDate: string
+  ): Promise<Transaction[]> {
+    try {
+      console.log(`Fetching transactions from ${startDate} to ${endDate} for user ${userId}`);
+      
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('transaction_date', startDate)
+        .lte('transaction_date', endDate)
+        .order('transaction_date', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching transactions by date range:', error);
+        throw error;
+      }
+
+      console.log(`Found ${data?.length || 0} transactions in date range`);
+      return data || [];
+    } catch (error) {
+      console.error('Error in getTransactionsByDateRange:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Format date for display in the UI
    */
   static formatTransactionDate(dateString: string): string {
