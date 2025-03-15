@@ -33,12 +33,19 @@ const Header: React.FC<HeaderProps> = ({ firstName, isLoading, unreadNotificatio
     router.push('/(tabs)/(home)/chat');
   };
 
+  const navigateToProfile = () => {
+    router.push('/(tabs)/(home)/profile');
+  };
+
   return (
     <View style={styles.header}>
       <View style={styles.greeting}>
-        <View style={styles.profileIcon}>
+        <TouchableOpacity 
+          style={styles.profileIcon} 
+          onPress={navigateToProfile}
+        >
           <Feather name="user" size={24} color="#FFF" />
-        </View>  
+        </TouchableOpacity>  
         <Text style={styles.greetingText}>
           {isLoading ? 'Loading...' : `${getGreeting()}, ${firstName || 'there'}`}
         </Text>

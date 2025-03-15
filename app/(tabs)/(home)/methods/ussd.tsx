@@ -10,20 +10,38 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Clipboard,
-  Image
+  Platform,
+  Image,
+  // Import Clipboard from react-native instead of expo-clipboard
+  Clipboard
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
 
-const Ussd = () => {
-  // Function to copy text to clipboard and notify the user
-  const copyToClipboard = (text: string) => {
-    Clipboard.setString(text);
-    Alert.alert('Copied', 'USSD code copied to clipboard!');
-  };
+// Create a safe copy function that works without dependencies
+const copyToClipboard = (text: string) => {
+  try {
+    // Use the built-in Clipboard if available
+    if (Clipboard?.setString) {
+      Clipboard.setString(text);
+      Alert.alert('Copied', 'USSD code copied to clipboard!');
+    } else if (navigator?.clipboard?.writeText) {
+      // Web fallback
+      navigator.clipboard.writeText(text);
+      Alert.alert('Copied', 'USSD code copied to clipboard!');
+    } else {
+      // Fallback if neither is available
+      Alert.alert('Info', 'Code: ' + text);
+    }
+  } catch (error) {
+    console.error('Failed to copy to clipboard:', error);
+    Alert.alert('Error', 'Failed to copy to clipboard');
+  }
+};
 
+// Make sure the component is properly exported as default
+const Ussd = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen
