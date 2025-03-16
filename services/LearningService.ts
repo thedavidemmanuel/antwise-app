@@ -12,6 +12,7 @@ export interface Course {
   icon: string;
   created_at: string;
   order_number?: number;
+  module_id?: string; // Added module_id property
 }
 
 export interface Lesson {

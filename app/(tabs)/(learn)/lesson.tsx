@@ -14,17 +14,29 @@ import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useSession } from '@/app/_layout';
 import { Feather } from '@expo/vector-icons';
 import { LearningService, Course, Lesson } from '@/services/LearningService';
+import { QuickCheck, QuickCheckOption, LessonContent } from '@/types/learning';
 
-interface QuickCheckOption {
-  id: string;
-  text: string;
-  correct?: boolean;
-}
+// Import all lesson content from modules
+import { lessons as moneyBasicsLessons } from './content/moneyBasics';
+import { lessons as savingGoalsLessons } from './content/savingAndSmartGoals';
+import { lessons as investingLessons } from './content/investingMadeEasy';
+import { lessons as financialPlanningLessons } from './content/financialPlanning';
+import { lessons as understandingDebtLessons } from './content/understandingDebt';
+import { lessons as debtAndLoansLessons } from './content/debtAndLoans';
+import { lessons as retirementPlanningLessons } from './content/retirementPlanning';
+import { lessons as cryptoLessons } from './content/cryptoAndDigitalFinance';
 
-interface QuickCheck {
-  question: string;
-  options: QuickCheckOption[];
-}
+// Combine all lessons together with their module source
+const allLessonsContent: Record<string, LessonContent[]> = {
+  'money-basics': moneyBasicsLessons,
+  'saving-goals': savingGoalsLessons,
+  'investing': investingLessons,
+  'financial-planning': financialPlanningLessons,
+  'understanding-debt': understandingDebtLessons,
+  'debt-loans': debtAndLoansLessons,
+  'retirement': retirementPlanningLessons,
+  'crypto': cryptoLessons
+};
 
 // Component for the "Quick Check" quiz at the end of each lesson
 const QuickCheckQuiz: React.FC<{
@@ -142,23 +154,13 @@ const LessonScreen = () => {
   const { session } = useSession();
   const [course, setCourse] = useState<Course | null>(null);
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [lessonContent, setLessonContent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [completed, setCompleted] = useState(false);
 
-  // Hard-coded quiz for the "Why Save?" lesson, in a real app this would come from the backend
-  const quickCheckQuiz: QuickCheck = {
-    question: "How many months of expenses should an emergency fund ideally cover?",
-    options: [
-      { id: "1", text: "1 month", correct: false },
-      { id: "2", text: "3-6 months", correct: true },
-      { id: "3", text: "12 months", correct: false },
-      { id: "4", text: "24 months", correct: false },
-    ]
-  };
-
-  // Fetch lesson details
+  // Fetch lesson details and content
   const fetchLessonDetails = async () => {
     if (!session?.user?.id || !courseId || !lessonId) return;
 
@@ -189,6 +191,15 @@ const LessonScreen = () => {
       
       setLesson(thisLesson);
       setCompleted(thisLesson.completed || false);
+      
+      // Find the content for this lesson from our imported modules
+      if (thisCourse.module_id && allLessonsContent[thisCourse.module_id]) {
+        const moduleContent = allLessonsContent[thisCourse.module_id];
+        const lessonContent = moduleContent.find(l => l.id === lessonId);
+        if (lessonContent) {
+          setLessonContent(lessonContent);
+        }
+      }
       
     } catch (err) {
       console.error('Error fetching lesson details:', err);
@@ -293,18 +304,22 @@ const LessonScreen = () => {
     );
   }
 
+  // Get the content from our imported modules or fallback to API data
+  const content = lessonContent || lesson;
+  const quiz = content.quiz || null;
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen
         options={{
-          headerTitle: lesson.title,
+          headerTitle: content.title || lesson.title,
           headerShown: true,
         }}
       />
       
       <ScrollView style={styles.scrollView}>
         <View style={styles.contentContainer}>
-          <Text style={styles.lessonTitle}>{lesson.title}</Text>
+          <Text style={styles.lessonTitle}>{content.title || lesson.title}</Text>
           
           <View style={styles.lessonMeta}>
             <View style={styles.lessonMetaItem}>
@@ -314,53 +329,48 @@ const LessonScreen = () => {
             
             <View style={styles.lessonMetaItem}>
               <Feather name="award" size={14} color="#666" />
-              <Text style={styles.lessonMetaText}>{lesson.xp_reward} XP</Text>
+              <Text style={styles.lessonMetaText}>{content.xp_reward || lesson.xp_reward} XP</Text>
             </View>
           </View>
           
-          {/* This would parse and render rich lesson content */}
+          {/* Render lesson content */}
           <View style={styles.lessonContent}>
-            <Text style={styles.lessonText}>{lesson.content}</Text>
+            <Text style={styles.lessonText}>{content.content || lesson.content}</Text>
             
-            {/* Example image - in a real app this would be dynamic */}
-            {lesson.title === 'Why Save?' && (
+            {/* Display image if available */}
+            {content.image && (
               <View style={styles.imageContainer}>
-                {/* Fix the image import path */}
                 <Image
-  source={{ uri: 'https://via.placeholder.com/150' }}
-  style={styles.lessonImage}
-  resizeMode="contain"
-/>
-                <Text style={styles.imageCaption}>Building an emergency fund provides peace of mind</Text>
+                  source={{ uri: content.image }}
+                  style={styles.lessonImage}
+                  resizeMode="contain"
+                />
+                {content.imageCaption && (
+                  <Text style={styles.imageCaption}>{content.imageCaption}</Text>
+                )}
               </View>
             )}
             
-            {/* More text content - in a real app this would be structured content */}
-            <Text style={styles.lessonSubheading}>Why it matters</Text>
-            <Text style={styles.lessonText}>
-              Saving isn't just about having money for the future. It's about creating financial security
-              and peace of mind for yourself and your loved ones. When you have savings, you're better
-              prepared for unexpected expenses, which reduces stress and gives you more control over your life.
-            </Text>
+            {/* Display additional sections if available */}
+            {content.sections && content.sections.map((section: { title: string; content: string }, index: number) => (
+              <View key={index}>
+                <Text style={styles.lessonSubheading}>{section.title}</Text>
+                <Text style={styles.lessonText}>{section.content}</Text>
+              </View>
+            ))}
             
-            <Text style={styles.lessonSubheading}>Getting started</Text>
-            <Text style={styles.lessonText}>
-              Start small and be consistent. Even setting aside a small amount regularly can grow into
-              a substantial emergency fund over time. The key is to make saving a habit.
-            </Text>
+            {/* Display tip if available */}
+            {content.tip && (
+              <View style={styles.tipContainer}>
+                <Feather name="info" size={24} color="#7C00FE" />
+                <Text style={styles.tipText}>{content.tip}</Text>
+              </View>
+            )}
             
-            <View style={styles.tipContainer}>
-              <Feather name="info" size={24} color="#7C00FE" />
-              <Text style={styles.tipText}>
-                Pro tip: Set up automatic transfers to your savings account right after you get paid.
-                What you don't see, you won't miss!
-              </Text>
-            </View>
-            
-            {/* Show quickCheck only at the end */}
-            {!completed && showQuiz && (
+            {/* Show quiz only if available and at the end when requested */}
+            {!completed && showQuiz && quiz && (
               <QuickCheckQuiz 
-                quickCheck={quickCheckQuiz} 
+                quickCheck={quiz} 
                 onComplete={handleQuizComplete} 
               />
             )}
