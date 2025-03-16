@@ -13,46 +13,18 @@ import {
   Image,
   Modal,
   KeyboardAvoidingView,
+  RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Stack, router } from 'expo-router';
 import { useSession } from '@/app/_layout';
 import { supabase } from '@/lib/supabase';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
-// Improved image picker hook with better error handling
-const useImagePicker = () => {
-  const [isAvailable, setIsAvailable] = useState(false);
-  const [imagePicker, setImagePicker] = useState<any>(null);
-  const [imageManipulator, setImageManipulator] = useState<any>(null);
-  
-  // Check for module availability in useEffect
-  useEffect(() => {
-    const initModules = async () => {
-      try {
-        // Try to require the modules instead of dynamic import
-        const imagePickerModule = require('expo-image-picker');
-        const imageManipulatorModule = require('expo-image-manipulator');
-        
-        setImagePicker(imagePickerModule);
-        setImageManipulator(imageManipulatorModule);
-        setIsAvailable(!!(imagePickerModule && imageManipulatorModule));
-      } catch (err) {
-        console.log("Error importing image modules:", err);
-        setIsAvailable(false);
-      }
-    };
-    
-    initModules();
-  }, []);
-  
-  return {
-    isAvailable,
-    imagePicker,
-    imageManipulator,
-  };
-};
-
+// Get screen dimensions for responsive design
 const { width } = Dimensions.get('window');
 const AVATAR_SIZE = 120;
 
@@ -66,12 +38,14 @@ interface ProfileData {
   date_of_birth: string | null;
   gender: string | null;
   nickname: string | null;
+  address: string | null; // Add address field to interface
 }
 
 const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
   const { session } = useSession();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [accountNumber, setAccountNumber] = useState('8104259027');
@@ -79,11 +53,13 @@ const ProfileScreen = () => {
   const [editValue, setEditValue] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [genderModalVisible, setGenderModalVisible] = useState(false);
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [avatarSource, setAvatarSource] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [tempDate, setTempDate] = useState(new Date());
   
   const userEmail = session?.user?.email || '';
   const inputRef = useRef<TextInput>(null);
-
-  const { isAvailable: imagePickerAvailable, imagePicker, imageManipulator } = useImagePicker();
 
   // Fetch profile data from Supabase
   const fetchProfile = async () => {
@@ -92,26 +68,54 @@ const ProfileScreen = () => {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .single();
       
-      if (error) {
-        console.error('Error fetching profile:', error);
-        if (error.code === 'PGRST116') { // Record not found
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        if (profileError.code === 'PGRST116') { // Record not found
           // Create a new profile if one doesn't exist
           await createProfile();
           return;
         }
-      } else if (data) {
-        setProfile(data as ProfileData);
+      } else if (profileData) {
+        setProfile(profileData as ProfileData);
+        
+        // If there's an avatar_url, load it from Supabase Storage
+        if (profileData.avatar_url) {
+          fetchAvatar(profileData.avatar_url);
+        }
       }
     } catch (error) {
       console.error('Exception fetching profile:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Fetch avatar from storage
+  const fetchAvatar = async (avatarUrl: string) => {
+    try {
+      const { data: fileData, error: fileError } = await supabase.storage
+        .from('avatars')
+        .download(avatarUrl);
+        
+      if (fileError) {
+        console.error('Error downloading avatar:', fileError);
+      } else if (fileData) {
+        // Convert blob to base64 and set as avatar source
+        const fr = new FileReader();
+        fr.onload = () => {
+          setAvatarSource(fr.result as string);
+        };
+        fr.readAsDataURL(fileData);
+      }
+    } catch (downloadError) {
+      console.error('Error processing avatar download:', downloadError);
     }
   };
 
@@ -131,16 +135,16 @@ const ProfileScreen = () => {
         full_name: metadata.full_name || `${metadata.first_name || ''} ${metadata.last_name || ''}`.trim() || null,
       };
       
-      const { data, error } = await supabase
+      const { data: createdProfile, error: createError } = await supabase
         .from('profiles')
         .insert(newProfile)
         .select()
         .single();
       
-      if (error) {
-        console.error('Error creating profile:', error);
-      } else if (data) {
-        setProfile(data as ProfileData);
+      if (createError) {
+        console.error('Error creating profile:', createError);
+      } else if (createdProfile) {
+        setProfile(createdProfile as ProfileData);
       }
     } catch (error) {
       console.error('Exception creating profile:', error);
@@ -156,7 +160,35 @@ const ProfileScreen = () => {
     try {
       setSaving(true);
       
-      const updates = { [field]: value };
+      // Create updates object
+      const updates: Record<string, any> = {};
+      
+      // Handle special cases for different field types
+      if (field === 'date_of_birth') {
+        // Set to null if value is empty string, otherwise use the value if it's a valid date
+        if (!value.trim()) {
+          updates[field] = null;
+        } else {
+          // Try to parse the value as a date
+          try {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              // Format the date as YYYY-MM-DD for PostgreSQL
+              updates[field] = date.toISOString().split('T')[0];
+            } else {
+              throw new Error('Invalid date format');
+            }
+          } catch (e) {
+            Alert.alert('Error', 'Please enter a valid date in format MM/DD/YYYY');
+            setSaving(false);
+            setIsEditing(null);
+            return;
+          }
+        }
+      } else {
+        // For other fields, use the value as is
+        updates[field] = value.trim() || null;
+      }
       
       // If the field is first_name or last_name, also update full_name
       if (field === 'first_name' || field === 'last_name') {
@@ -165,23 +197,26 @@ const ProfileScreen = () => {
           [field]: value
         };
         
-        updates.full_name = `${updatedProfile.first_name || ''} ${updatedProfile.last_name || ''}`.trim();
+        updates.full_name = `${updatedProfile.first_name || ''} ${updatedProfile.last_name || ''}`.trim() || null;
       }
       
       // If field is nickname, update both nickname and full_name
       if (field === 'nickname') {
-        updates.full_name = value; // Set full_name to nickname
+        updates.full_name = value.trim() || null; // Set full_name to nickname
       }
       
-      const { error } = await supabase
+      console.log('Updating profile with:', updates);
+      
+      const { error: updateError } = await supabase
         .from('profiles')
         .update(updates)
         .eq('id', session.user.id);
       
-      if (error) {
+      if (updateError) {
         Alert.alert('Error', 'Failed to update profile');
-        console.error('Error updating profile:', error);
+        console.error('Error updating profile:', updateError);
       } else {
+        // Update local state with the new values
         setProfile(prev => prev ? { ...prev, ...updates } : null);
       }
     } catch (error) {
@@ -222,32 +257,15 @@ const ProfileScreen = () => {
     }
   };
 
-  // Updated profile picture upload function with safer implementation
+  // Profile picture upload function
   const handleProfilePictureUpload = async () => {
     if (!session?.user?.id) return;
-    
-    // Check if ImagePicker module is available
-    if (!imagePickerAvailable || !imagePicker) {
-      Alert.alert(
-        'Feature Unavailable', 
-        'Profile picture upload is not available on this platform or the required modules are not installed.'
-      );
-      return;
-    }
     
     try {
       setUploadingImage(true);
       
-      // Safely access the imagePicker methods by checking if they exist
-      const requestPermissions = imagePicker?.requestMediaLibraryPermissionsAsync;
-      if (typeof requestPermissions !== 'function') {
-        throw new Error('Image picker functionality not available');
-      }
-      
-      // Request permissions with proper error handling
-      const permissionResult = await requestPermissions().catch(() => ({
-        granted: false
-      }));
+      // Request permissions
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (!permissionResult.granted) {
         Alert.alert('Permission required', 'Please grant access to your photo library to upload a profile picture.');
@@ -255,34 +273,74 @@ const ProfileScreen = () => {
         return;
       }
       
-      // Launch image picker safely
-      const launchLibrary = imagePicker?.launchImageLibraryAsync;
-      if (typeof launchLibrary !== 'function') {
-        throw new Error('Image library access not available');
-      }
-      
-      const pickerResult = await launchLibrary({
-        mediaTypes: imagePicker?.MediaTypeOptions?.Images || 'images',
+      // Launch image picker
+      const pickerResult = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
-      }).catch(() => ({ cancelled: true, assets: null }));
+      });
       
-      if (pickerResult.cancelled || !pickerResult.assets || pickerResult.assets.length === 0) {
+      if (pickerResult.canceled || !pickerResult.assets || pickerResult.assets.length === 0) {
         setUploadingImage(false);
         return;
       }
       
-      // Process the selected image and update profile
-      // This is just a placeholder - in a real app you'd upload the image to storage
-      setTimeout(() => {
-        setUploadingImage(false);
-        Alert.alert('Success', 'Profile picture updated!');
-      }, 1000);
+      // Get the selected asset
+      const asset = pickerResult.assets[0];
       
+      // Set temporary preview
+      setAvatarSource(asset.uri);
+      
+      // Use FileSystem to read the file directly instead of fetch
+      const fileInfo = await FileSystem.getInfoAsync(asset.uri);
+      
+      if (!fileInfo.exists) {
+        throw new Error('File does not exist');
+      }
+      
+      // Create file name with proper extension
+      const fileExtension = asset.uri.split('.').pop() || 'jpg';
+      const fileName = `${session.user.id}-${Date.now()}.${fileExtension}`;
+      
+      // Read the file content directly
+      const fileContent = await FileSystem.readAsStringAsync(asset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      // Upload directly using base64
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, fileContent, {
+          contentType: `image/${fileExtension === 'jpg' ? 'jpeg' : fileExtension}`,
+          upsert: true
+        });
+      
+      if (uploadError) {
+        Alert.alert('Error', 'Failed to upload profile picture');
+        console.error('Error uploading image:', uploadError);
+        setUploadingImage(false);
+        return;
+      }
+      
+      // Update profile with new avatar_url
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: fileName })
+        .eq('id', session.user.id);
+      
+      if (updateError) {
+        Alert.alert('Error', 'Failed to update profile with new avatar');
+        console.error('Error updating profile with avatar_url:', updateError);
+      } else {
+        // Update local state
+        setProfile(prev => prev ? { ...prev, avatar_url: fileName } : null);
+        Alert.alert('Success', 'Profile picture updated!');
+      }
     } catch (error) {
       console.error('Exception in handleProfilePictureUpload:', error);
-      Alert.alert('Error', 'An unexpected error occurred while accessing the image library');
+      Alert.alert('Error', 'An unexpected error occurred while uploading the image');
+    } finally {
       setUploadingImage(false);
     }
   };
@@ -291,6 +349,46 @@ const ProfileScreen = () => {
   const setGender = async (gender: string) => {
     await updateProfileField('gender', gender);
     setGenderModalVisible(false);
+  };
+
+  // Set address
+  const setAddress = async (address: string) => {
+    await updateProfileField('address', address);
+    setAddressModalVisible(false);
+  };
+
+  // Handle date change
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    
+    if (event.type === 'dismissed') {
+      return;
+    }
+    
+    if (selectedDate) {
+      setTempDate(selectedDate);
+      
+      // Format date for display and storage (YYYY-MM-DD)
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      updateProfileField('date_of_birth', formattedDate);
+    }
+  };
+
+  // Show date picker
+  const showDatePickerModal = () => {
+    // Initialize with current date value if available
+    if (profile?.date_of_birth) {
+      setTempDate(new Date(profile.date_of_birth));
+    } else {
+      setTempDate(new Date());
+    }
+    setShowDatePicker(true);
+  };
+
+  // Refresh profile data
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProfile();
   };
 
   // Initialize
@@ -398,6 +496,14 @@ const ProfileScreen = () => {
           style={styles.scrollView}
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={['#7C00FE']}
+              tintColor="#7C00FE"
+            />
+          }
         >
           {/* Profile Picture Section */}
           <View style={styles.avatarSection}>
@@ -405,9 +511,9 @@ const ProfileScreen = () => {
               <View style={styles.avatarContainer}>
                 <ActivityIndicator size="large" color="#7C00FE" />
               </View>
-            ) : profile?.avatar_url ? (
+            ) : avatarSource ? (
               <Image
-                source={{ uri: profile.avatar_url }}
+                source={{ uri: avatarSource }}
                 style={styles.avatar}
               />
             ) : (
@@ -418,17 +524,14 @@ const ProfileScreen = () => {
               </View>
             )}
             
-            {/* Only show edit button when image picker is available */}
-            {imagePickerAvailable && (
-              <TouchableOpacity
-                style={styles.editAvatarButton}
-                onPress={handleProfilePictureUpload}
-              >
-                <Feather name="camera" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.editAvatarButton}
+              onPress={handleProfilePictureUpload}
+            >
+              <Feather name="camera" size={16} color="#FFFFFF" />
+            </TouchableOpacity>
             
-            <View style={styles.cameraIconContainer}>
+            <View style={styles.nameContainer}>
               <Text style={styles.nameText}>
                 {profile?.full_name || profile?.first_name || userEmail.split('@')[0]}
               </Text>
@@ -491,11 +594,20 @@ const ProfileScreen = () => {
             </View>
             
             {/* Date of Birth */}
-            {renderProfileField(
-              'Date of Birth',
-              profile?.date_of_birth ? formatDateOfBirth(profile.date_of_birth) : null,
-              'date_of_birth'
-            )}
+            <View style={[styles.fieldContainer, styles.fieldBorder]}>
+              <Text style={styles.fieldLabel}>Date of Birth</Text>
+              <View style={styles.valueContainer}>
+                <Text style={styles.fieldValue}>
+                  {profile?.date_of_birth ? formatDateOfBirth(profile.date_of_birth) : 'Select date of birth'}
+                </Text>
+                <TouchableOpacity 
+                  onPress={showDatePickerModal}
+                  style={styles.editIconButton}
+                >
+                  <Feather name="calendar" size={16} color="#7C00FE" />
+                </TouchableOpacity>
+              </View>
+            </View>
             
             {/* Email */}
             {renderProfileField(
@@ -507,13 +619,24 @@ const ProfileScreen = () => {
             )}
             
             {/* Address */}
-            {renderProfileField(
-              'Address',
-              'Enter address',
-              'address',
-              true
-            )}
+            <View style={[styles.fieldContainer]}>
+              <Text style={styles.fieldLabel}>Address</Text>
+              <View style={styles.valueContainer}>
+                <Text style={styles.fieldValue} numberOfLines={2}>
+                  {profile?.address || 'Enter address'}
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => setAddressModalVisible(true)} 
+                  style={styles.editIconButton}
+                >
+                  <Feather name="chevron-right" size={20} color="#7C00FE" />
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
+
+          {/* Extra padding at bottom to ensure content is visible when keyboard is open */}
+          <View style={styles.bottomPadding} />
         </ScrollView>
       )}
       
@@ -558,6 +681,62 @@ const ProfileScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Address Modal */}
+      <Modal
+        visible={addressModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAddressModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ width: '100%', alignItems: 'center' }}
+          >
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Enter Address</Text>
+              
+              <TextInput
+                style={styles.addressInput}
+                value={profile?.address || ''}
+                onChangeText={(text) => setProfile(prev => prev ? { ...prev, address: text } : null)}
+                placeholder="Enter your address"
+                multiline={true}
+                numberOfLines={3}
+                autoFocus
+              />
+              
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={[styles.modalActionButton, styles.cancelButton]}
+                  onPress={() => setAddressModalVisible(false)}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.modalActionButton, styles.saveButton]}
+                  onPress={() => setAddress(profile?.address || '')}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={tempDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          maximumDate={new Date()}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -577,6 +756,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingBottom: 40,
+  },
+  bottomPadding: {
+    height: 100, // Add extra padding at bottom
   },
   avatarSection: {
     alignItems: 'center',
@@ -622,7 +804,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
-  cameraIconContainer: {
+  nameContainer: {
     marginTop: 10,
     alignItems: 'center',
   },
@@ -742,6 +924,42 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: 'rgba(124, 0, 254, 0.1)',
     borderRadius: 8,
+  },
+  addressInput: {
+    borderWidth: 1,
+    borderColor: '#DDDDDD',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginVertical: 16,
+    textAlignVertical: 'top',
+    minHeight: 100,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  modalActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#F0F0F0',
+  },
+  saveButton: {
+    backgroundColor: '#7C00FE',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    color: '#333333',
+  },
+  saveButtonText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   modalCancelText: {
     fontSize: 16,
