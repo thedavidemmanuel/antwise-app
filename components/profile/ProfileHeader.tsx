@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -37,13 +37,52 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onAvatarUpdate,
 }) => {
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [avatarSource, setAvatarSource] = useState<string | null>(avatarUrl || null);
+  const [avatarSource, setAvatarSource] = useState<string | null>(null);
 
   // Generate placeholder avatar when no image is available
   const getPlaceholderAvatar = () => {
     const name = fullName || firstName || email.split('@')[0];
     return name.charAt(0).toUpperCase();
   };
+
+  // Get public URL for avatar
+  const getAvatarUrl = async (fileName: string | null | undefined) => {
+    if (!fileName) return null;
+    
+    try {
+      // Get public URL for the avatar
+      const { data } = await supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+      
+      if (data && data.publicUrl) {
+        return data.publicUrl;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting avatar URL:', error);
+      return null;
+    }
+  };
+
+  // Load avatar when component mounts or avatarUrl changes
+  useEffect(() => {
+    const loadAvatar = async () => {
+      if (avatarUrl) {
+        // Check if the avatarUrl is already a full URL or just a filename
+        if (avatarUrl.startsWith('http')) {
+          setAvatarSource(avatarUrl);
+        } else {
+          const publicUrl = await getAvatarUrl(avatarUrl);
+          setAvatarSource(publicUrl);
+        }
+      } else {
+        setAvatarSource(null);
+      }
+    };
+
+    loadAvatar();
+  }, [avatarUrl]);
 
   // Profile picture upload function
   const handleProfilePictureUpload = async () => {
@@ -76,16 +115,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       
       // Get the selected asset
       const asset = pickerResult.assets[0];
-      
-      // Set temporary preview
-      setAvatarSource(asset.uri);
-      
-      // Use FileSystem to read the file directly instead of fetch
-      const fileInfo = await FileSystem.getInfoAsync(asset.uri);
-      
-      if (!fileInfo.exists) {
-        throw new Error('File does not exist');
-      }
       
       // Create file name with proper extension
       const fileExtension = asset.uri.split('.').pop() || 'jpg';
@@ -121,6 +150,14 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         Alert.alert('Error', 'Failed to update profile with new avatar');
         console.error('Error updating profile with avatar_url:', updateError);
       } else {
+        // Get public URL for display
+        const publicUrl = await getAvatarUrl(fileName);
+        
+        // Set local state for immediate display
+        if (publicUrl) {
+          setAvatarSource(publicUrl);
+        }
+        
         // Notify parent component
         onAvatarUpdate(fileName);
         Alert.alert('Success', 'Profile picture updated!');
@@ -133,11 +170,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     }
   };
 
-  // Update avatar source when prop changes
-  React.useEffect(() => {
-    setAvatarSource(avatarUrl || null);
-  }, [avatarUrl]);
-
   return (
     <View style={styles.avatarSection}>
       {uploadingImage ? (
@@ -148,6 +180,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <Image
           source={{ uri: avatarSource }}
           style={styles.avatar}
+          onError={() => {
+            console.log('Error loading image:', avatarSource);
+            setAvatarSource(null);
+          }}
         />
       ) : (
         <View style={styles.avatarPlaceholder}>

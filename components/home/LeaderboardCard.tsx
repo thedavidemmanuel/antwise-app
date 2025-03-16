@@ -1,8 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const LeaderboardCard: React.FC = () => {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       {/* Icon + Title Row */}
@@ -17,7 +20,10 @@ const LeaderboardCard: React.FC = () => {
       <Text style={styles.subtitle}>Compete and save with friends</Text>
 
       {/* Button */}
-      <TouchableOpacity style={styles.button}>
+      <TouchableOpacity 
+        style={styles.button}
+        onPress={() => router.push('/(tabs)/(home)/leaderboard')}
+      >
         <Text style={styles.buttonText}>View Rankings</Text>
       </TouchableOpacity>
     </View>
