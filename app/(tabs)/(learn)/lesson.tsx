@@ -192,13 +192,67 @@ const LessonScreen = () => {
       setLesson(thisLesson);
       setCompleted(thisLesson.completed || false);
       
-      // Find the content for this lesson from our imported modules
-      if (thisCourse.module_id && allLessonsContent[thisCourse.module_id]) {
-        const moduleContent = allLessonsContent[thisCourse.module_id];
-        const lessonContent = moduleContent.find(l => l.id === lessonId);
-        if (lessonContent) {
-          setLessonContent(lessonContent);
+      // Add debugging code
+      if (thisCourse && thisLesson) {
+        console.log('=== DEBUG INFO ===');
+        console.log('Course:', {
+          id: thisCourse.id,
+          title: thisCourse.title,
+          module_id: thisCourse.module_id
+        });
+        
+        console.log('Lesson:', {
+          id: thisLesson.id,
+          title: thisLesson.title,
+          content_id: thisLesson.content_id
+        });
+        
+        // Check if the content exists
+        if (thisCourse.module_id && 
+            allLessonsContent[thisCourse.module_id] && 
+            thisLesson.content_id) {
+          
+          const found = allLessonsContent[thisCourse.module_id]
+                       .some(l => l.id === thisLesson.content_id);
+          
+          console.log(`Content found: ${found}`);
+          
+          if (!found) {
+            console.log('All available content_ids in this module:', 
+                       allLessonsContent[thisCourse.module_id].map(l => l.id));
+          }
         }
+        console.log('=== END DEBUG ===');
+      }
+      
+      // Find the content for this lesson from our imported modules
+      if (thisCourse?.module_id && thisLesson?.content_id) {
+        console.log(`Looking for content with module_id: ${thisCourse.module_id}, content_id: ${thisLesson.content_id}`);
+        
+        // Check if this module exists in our content
+        if (allLessonsContent[thisCourse.module_id]) {
+          const moduleContent = allLessonsContent[thisCourse.module_id];
+          console.log(`Found module content with ${moduleContent.length} lessons`);
+          
+          // Find the specific lesson content
+          const lessonContent = moduleContent.find(l => l.id === thisLesson.content_id);
+          
+          if (lessonContent) {
+            console.log(`Found matching lesson content: ${lessonContent.title}`);
+            setLessonContent(lessonContent);
+          } else {
+            console.error(`No content found with id "${thisLesson.content_id}" in module "${thisCourse.module_id}"`);
+            console.log('Available content_ids:', moduleContent.map(l => l.id));
+          }
+        } else {
+          console.error(`No content module found with id "${thisCourse.module_id}"`);
+          console.log('Available modules:', Object.keys(allLessonsContent));
+        }
+      } else {
+        console.error('Missing module_id or content_id:', { 
+          'course.module_id': thisCourse?.module_id,
+          'lesson.content_id': thisLesson?.content_id
+        });
       }
       
     } catch (err) {

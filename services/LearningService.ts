@@ -25,6 +25,7 @@ export interface Lesson {
   order_number: number;
   created_at: string;
   completed?: boolean;
+  content_id?: string; // Added optional content_id field
 }
 
 export interface UserLearningStats {
