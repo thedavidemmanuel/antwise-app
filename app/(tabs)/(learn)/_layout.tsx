@@ -21,12 +21,6 @@ export default function LearnLayout() {
           title: 'Lesson'
         }}
       />
-      <Stack.Screen
-        name="quiz"
-        options={{
-          title: 'Quiz'
-        }}
-      />
     </Stack>
   );
 }

@@ -1,6 +1,6 @@
 export const lessons = [
     {
-      id: 'lesson1',
+      id: 'money-basics-lesson1',
       title: 'Where Does All My Money Go?',
       content: `Do you ever reach the end of the month wondering how your salary disappeared so quickly? Understanding where your money goes is the first step to financial control.
   
@@ -32,7 +32,7 @@ export const lessons = [
       },
     },
     {
-      id: 'lesson2',
+      id: 'money-basics-lesson2',
       title: 'Budgeting for Humans',
       content: `A budget isn't a financial straitjacket—it's your personalized spending plan that ensures you have enough for what truly matters.
   
@@ -64,8 +64,8 @@ export const lessons = [
       },
     },
     {
-      id: 'lesson3',
-      title: 'Emergency Fund 101',
+      id: 'money-basics-lesson3',
+      title: 'Emergency Fund Essentials',
       content: `Life happens. Cars break down, medical emergencies arise, job loss occurs. An emergency fund is your financial shock absorber for life's unexpected bumps.
   
   An emergency fund isn't an investment—it's insurance. It's the money that keeps a temporary setback from becoming a financial disaster. 
@@ -96,3 +96,5 @@ export const lessons = [
       },
     },
   ];
+
+  export default { lessons };

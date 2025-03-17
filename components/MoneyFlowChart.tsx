@@ -21,76 +21,65 @@ const CARD_HEIGHT = 120;
 const CARD_PADDING = 12;
 
 const MoneyFlowChart: React.FC<MoneyFlowChartProps> = ({ data, timeframe }) => {
-  // Fix: Handle potential undefined values safely
+  // Formatter for amounts
   const formatRWF = (value: number | undefined) => {
-    // Make sure value is a number and not undefined
     const safeValue = typeof value === 'number' ? value : 0;
     return `RWF ${safeValue.toLocaleString()}`;
   };
 
-  // Percentage calculation explained
-  const calculatePercentageChange = (values: number[]) => {
-    // If we don't have at least 2 values, return 0 (no change)
-    if (!values || values.length < 2) return 0;
-    
-    // Get first and last non-zero values
-    let firstValue = 0;
-    let lastValue = 0;
-    
-    // Find first non-zero value in the dataset
-    for (let i = 0; i < values.length; i++) {
-      if (values[i] > 0) {
-        firstValue = values[i];
-        break;
-      }
-    }
-    
-    // Find last non-zero value in the dataset
-    for (let i = values.length - 1; i >= 0; i--) {
-      if (values[i] > 0) {
-        lastValue = values[i];
-        break;
-      }
-    }
-    
-    // If first value is still zero (all data points were zero), return 0
-    if (firstValue === 0) return 0;
-    
-    // Calculate percentage change: ((last - first) / first) * 100
-    return ((lastValue - firstValue) / firstValue) * 100;
+  // Helper: compute cumulative sum so that the chart and totals reflect the entire period’s flow.
+  const cumulativeSum = (values: number[]) => {
+    let total = 0;
+    return values.map((val) => {
+      total += val;
+      return total;
+    });
   };
 
-  // Ensure data is valid
+  // Use safe data array
   const safeData = data && data.length > 0 ? data : [];
   
-  // Fix: Ensure we have valid numbers for each entry
-  const moneyInData = safeData.map(item => item?.moneyIn || 0);
-  const moneyOutData = safeData.map(item => item?.moneyOut || 0);
+  // Get daily amounts from safeData
+  const dailyMoneyIn = safeData.map(item => item?.moneyIn || 0);
+  const dailyMoneyOut = safeData.map(item => item?.moneyOut || 0);
   
-  const moneyInChange = calculatePercentageChange(moneyInData);
-  const moneyOutChange = calculatePercentageChange(moneyOutData);
+  // Compute cumulative totals
+  const cumulativeMoneyIn = cumulativeSum(dailyMoneyIn);
+  const cumulativeMoneyOut = cumulativeSum(dailyMoneyOut);
 
-  // Get the latest values safely
-  const latestMoneyIn = moneyInData.length > 0 ? moneyInData[moneyInData.length - 1] : 0;
-  const latestMoneyOut = moneyOutData.length > 0 ? moneyOutData[moneyOutData.length - 1] : 0;
+  // Calculate percentage change based on cumulative totals (from first day to last day)
+  const calculateChange = (cumulative: number[]) => {
+    if (cumulative.length < 2) return 0;
+    const first = cumulative[0];
+    const last = cumulative[cumulative.length - 1];
+    // If the first cumulative value is zero, avoid division by zero (show 0 if both are 0, else 100)
+    if (first === 0) return last === 0 ? 0 : 100;
+    return ((last - first) / first) * 100;
+  };
 
-  // Format percentage with sign and 1 decimal place
+  const moneyInChange = calculateChange(cumulativeMoneyIn);
+  const moneyOutChange = calculateChange(cumulativeMoneyOut);
+
+  // Use the last cumulative value as the total money in/out for the period
+  const latestMoneyIn = cumulativeMoneyIn.length > 0 ? cumulativeMoneyIn[cumulativeMoneyIn.length - 1] : 0;
+  const latestMoneyOut = cumulativeMoneyOut.length > 0 ? cumulativeMoneyOut[cumulativeMoneyOut.length - 1] : 0;
+
+  // Format percentage with sign and one decimal place
   const formatPercentage = (value: number) => {
     const formattedValue = Math.abs(value).toFixed(1);
     return value >= 0 ? `+${formattedValue}%` : `-${formattedValue}%`;
   };
 
+  // Render chart using the cumulative data and consistent inner width
   const renderChart = (chartValues: number[], color: string) => {
-    // Ensure we have at least some data points
     const dataPoints = chartValues.length > 0 ? chartValues : [0, 0];
-    
     return (
       <LineChart
         data={{
           labels: [],
           datasets: [{ data: dataPoints }],
         }}
-        width={CARD_WIDTH - 2 * CARD_PADDING + 90}
+        width={CARD_WIDTH - 2 * CARD_PADDING} // use the card's inner width for consistency
         height={55}
         withDots={false}
         withInnerLines={false}
@@ -115,9 +104,8 @@ const MoneyFlowChart: React.FC<MoneyFlowChartProps> = ({ data, timeframe }) => {
         style={{
           margin: 0,
           padding: 0,
-          alignSelf: 'flex-start',
+          alignSelf: 'center', // center the chart inside the card
           backgroundColor: 'transparent',
-          marginLeft: -65,
         }}
         bezier
       />
@@ -147,7 +135,7 @@ const MoneyFlowChart: React.FC<MoneyFlowChartProps> = ({ data, timeframe }) => {
               </Text>
             </View>
             <View style={[styles.chartWrapper, { backgroundColor: 'transparent' }]}>
-              {renderChart(moneyInData, '#4CD964')}
+              {renderChart(cumulativeMoneyIn, '#4CD964')}
             </View>
           </View>
         </View>
@@ -162,11 +150,10 @@ const MoneyFlowChart: React.FC<MoneyFlowChartProps> = ({ data, timeframe }) => {
                   {formatRWF(latestMoneyOut)}
                 </Text>
               </View>
-              {/* For Money Out, a negative percentage is actually good (spending less) */}
               <Text 
                 style={[
                   styles.percentageText, 
-                  // Inverted logic for expenses: negative change is good (green)
+                  // For Money Out, a negative change (less spending) is good
                   moneyOutChange <= 0 ? styles.positiveChange : styles.negativeChange
                 ]}
               >
@@ -174,7 +161,7 @@ const MoneyFlowChart: React.FC<MoneyFlowChartProps> = ({ data, timeframe }) => {
               </Text>
             </View>
             <View style={[styles.chartWrapper, { backgroundColor: 'transparent' }]}>
-              {renderChart(moneyOutData, '#FF3B30')}
+              {renderChart(cumulativeMoneyOut, '#FF3B30')}
             </View>
           </View>
         </View>
@@ -253,7 +240,7 @@ const styles = StyleSheet.create({
   },
   chartWrapper: {
     flex: 1,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'flex-end',
     backgroundColor: 'transparent',
   },

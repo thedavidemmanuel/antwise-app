@@ -1,98 +1,88 @@
 export const lessons = [
-    {
-      id: 'saving1',
-      title: 'Why Save?',
-      content: `Saving isn't just about having money for the future. It's about creating possibilities and protection for yourself today and tomorrow.
-  
-  Consistent saving is the foundation of financial wellbeing. It reduces stress, increases your options, and gives you the power to say "yes" to opportunities and "no" to situations that aren't right for you.
-  
-  While investing gets more attention, saving is what makes investing possible. Think of saving as the reliable foundation upon which you build your financial house.`,
-      xp_reward: 60,
-      image: 'https://via.placeholder.com/150',
-      imageCaption: 'Building an emergency fund provides peace of mind',
-      sections: [
-        {
-          title: 'Why it matters',
-          content: `Saving isn't just about having money for the future. It's about creating financial security and peace of mind for yourself and your loved ones. When you have savings, you're better prepared for unexpected expenses, which reduces stress and gives you more control over your life.`
-        },
-        {
-          title: 'Getting started',
-          content: `Start small and be consistent. Even setting aside a small amount regularly can grow into a substantial emergency fund over time. The key is to make saving a habit.`
-        }
-      ],
-      tip: 'Pro tip: Set up automatic transfers to your savings account right after you get paid. What you don\'t see, you won\'t miss!',
-      quiz: {
-        question: "How many months of expenses should an emergency fund ideally cover?",
-        options: [
-          { id: '1', text: '1 month', correct: false },
-          { id: '2', text: '3-6 months', correct: true },
-          { id: '3', text: '12 months', correct: false },
-          { id: '4', text: '24 months', correct: false },
-        ],
+  {
+    id: 'saving-smart-goals-lesson1',
+    title: 'Emergency Fund: The Sequel',
+    content: `Take your emergency fund from side character to financial superhero! When life throws a plot twist—like your phone diving into a pool—your emergency fund should swoop in to save the day.`,
+    xp_reward: 10,
+    image: 'https://via.placeholder.com/150',
+    imageCaption: 'Your emergency fund: reliable like Wi-Fi, essential like air.',
+    sections: [
+      {
+        title: 'Why It Matters',
+        content: `An emergency fund protects you from financial cliffhangers. Think of it as binge-watching your favorite series without fear of subscription cancellations.`
       },
-    },
-    {
-      id: 'saving2',
-      title: 'Setting SMART Financial Goals',
-      content: `Dreaming is free, but achieving dreams requires a plan. SMART goals transform vague wishes into achievable realities.
-  
-  SMART stands for Specific, Measurable, Achievable, Relevant, and Time-bound. Instead of "save more money," a SMART goal would be "save ₦500,000 for a house down payment by December 2023."
-  
-  When your goals are SMART, you can track progress, celebrate milestones, and make adjustments when needed. You're no longer just hoping—you're planning.`,
-      xp_reward: 75,
-      image: 'https://via.placeholder.com/150',
-      imageCaption: 'SMART goals turn financial dreams into reality',
-      sections: [
-        {
-          title: 'Why it matters',
-          content: `Without clear goals, saving becomes an abstract concept with no emotional connection. SMART goals give your saving purpose and direction. You're not just saving "because you should"—you're saving for your dream home, starting a business, or taking that special trip. This emotional connection makes you much more likely to stick with your saving plan.`
-        },
-        {
-          title: 'Getting started',
-          content: `Choose one financial goal that matters deeply to you. Apply the SMART framework: make it Specific (exactly what you want), Measurable (how much money needed), Achievable (realistic for your income), Relevant (truly important to you), and Time-bound (with a target date). Break this goal into smaller monthly or weekly targets to make it less overwhelming.`
-        }
-      ],
-      tip: 'Pro tip: Visualize your goal! Keep a picture of the house you\'re saving for, the business you want to start, or the graduation cap representing your education fund. This visual reminder strengthens your commitment.',
-      quiz: {
-        question: "What does the 'M' in SMART goals stand for?",
-        options: [
-          { id: '1', text: 'Miraculous', correct: false },
-          { id: '2', text: 'Measurable', correct: true },
-          { id: '3', text: 'Monetary', correct: false },
-          { id: '4', text: 'Meaningful', correct: false },
-        ],
+      {
+        title: 'Getting Started',
+        content: `Consistently set aside a portion of your income—no amount is too small. Like leveling up in your favorite game, steady progress unlocks big wins.`
+      }
+    ],
+    tip: 'Pro tip: Automate your savings—like hitting “subscribe” on financial peace of mind.',
+    quiz: {
+      question: "When unexpected expenses strike, your emergency fund becomes...?",
+      options: [
+        { id: '1', text: 'The plot armor protecting your wallet', correct: true },
+        { id: '2', text: 'An unreliable friend who ghosts you', correct: false },
+        { id: '3', text: 'A magician making money disappear', correct: false },
+        { id: '4', text: 'Your hype squad, cheering but doing nothing else', correct: false }
+      ]
+    }
+  },
+  {
+    id: 'saving-smart-goals-lesson2',
+    title: 'Saving Goals: Wishful Thinking, But Make It SMART',
+    content: `Saving without goals is like cooking without a recipe—sure, edible, but is it tasty? SMART goals (Specific, Measurable, Achievable, Relevant, Time-bound) turn vague ideas into delicious results.`,
+    xp_reward: 10,
+    image: 'https://via.placeholder.com/150',
+    imageCaption: 'SMART goals: The recipe to financial success!',
+    sections: [
+      {
+        title: 'Why It Matters',
+        content: `SMART goals help you keep track and stay motivated—like your fitness app reminding you to move (but for your wallet).`
       },
-    },
-    {
-      id: 'saving3',
-      title: 'Automation: Your Saving Superpower',
-      content: `Willpower is finite. Automation removes the need for daily financial discipline by making saving your default.
-  
-  When saving is automatic, you don't have to remember to save or fight the temptation to spend that money elsewhere. It happens without any mental effort on your part.
-  
-  Automation isn't just convenient—it's transformative. Research shows that people who automate their savings save more than twice as much as those who don't, even with the same income.`,
-      xp_reward: 65,
-      image: 'https://via.placeholder.com/150',
-      imageCaption: 'Automating your savings is like having a financial assistant working 24/7',
-      sections: [
-        {
-          title: 'Why it matters',
-          content: `Relying on willpower alone for saving is like trying to bail out a leaky boat with a teaspoon—eventually, you'll get tired. Automation changes the equation by making saving the default rather than something you have to actively choose each time. This removes the psychological friction that makes consistent saving difficult.`
-        },
-        {
-          title: 'Getting started',
-          content: `Set up an automatic transfer from your checking account to a separate savings account the day after you typically get paid. Start with just 5-10% of your income if you're new to saving. Increase this percentage gradually as you adjust your spending habits. Many employers also offer direct deposit to multiple accounts, which can automate saving before you even see the money.`
-        }
-      ],
-      tip: 'Pro tip: Increase your automatic savings amount by 1% every three months. This gradual change will be barely noticeable in your daily life but will significantly impact your savings over time!',
-      quiz: {
-        question: "What's the best timing for automated transfers to savings?",
-        options: [
-          { id: '1', text: 'At the end of the month if money is left over', correct: false },
-          { id: '2', text: 'Right after you get paid', correct: true },
-          { id: '3', text: 'When you feel motivated to save', correct: false },
-          { id: '4', text: 'Only during sales to avoid temptation', correct: false },
-        ],
+      {
+        title: 'Getting Started',
+        content: `Start by clearly defining your goal: “Save ₦100,000 in one year for a laptop” beats “Maybe save some money sometime.” Check your progress regularly—like checking likes on your latest post.`
+      }
+    ],
+    tip: 'Pro tip: Write your SMART goals down—because your brain is great, but it’s also busy remembering song lyrics.',
+    quiz: {
+      question: "A SMART goal is best described as...?",
+      options: [
+        { id: '1', text: 'A goal clearer than your phone camera on portrait mode', correct: false },
+        { id: '2', text: 'Specific, measurable, achievable, relevant, and time-bound', correct: true },
+        { id: '3', text: 'Hoping your savings grow faster than gossip', correct: false },
+        { id: '4', text: 'Vague enough to impress your friends', correct: false }
+      ]
+    }
+  },
+  {
+    id: 'saving-smart-goals-lesson3',
+    title: "Savings on Autopilot: Lazy Yet Genius",
+    content: `Auto-saving is like having a personal assistant for your money, working silently in the background—minus the awkward small talk. Set it, forget it, and smile when your account grows by itself.`,
+    xp_reward: 10,
+    image: 'https://via.placeholder.com/150',
+    imageCaption: 'Automated saving: because your memory already has too many tabs open.',
+    sections: [
+      {
+        title: 'Why It Matters',
+        content: `Auto-saving takes the effort out of saving, freeing your mind to stress about more important things—like what’s for dinner.`
       },
-    },
-  ];
+      {
+        title: 'Getting Started',
+        content: `Schedule automatic transfers directly from your paycheck. It’s the lazy person’s route to wealth—the best kind.`
+      }
+    ],
+    tip: 'Pro tip: Automate your savings today—your future self will thank you by buying better gifts.',
+    quiz: {
+      question: "What’s the magic behind automated savings?",
+      options: [
+        { id: '1', text: 'It secretly puts money away so you can’t impulsively spend it', correct: true },
+        { id: '2', text: 'It turns your bank into a mysterious wizard', correct: false },
+        { id: '3', text: 'It makes money rain from the ceiling', correct: false },
+        { id: '4', text: 'It gently shames you for buying coffee every morning', correct: false }
+      ]
+    }
+  }
+];
+
+export default { lessons };

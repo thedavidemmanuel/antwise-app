@@ -37,7 +37,7 @@ const CourseDetailsScreen = () => {
       
       if (!thisCourse) {
         Alert.alert('Error', 'Course not found');
-        router.back();
+        router.back(); // Use router.back() to respect navigation history
         return;
       }
       
@@ -144,6 +144,11 @@ const CourseDetailsScreen = () => {
           options={{
             headerTitle: 'Course Details',
             headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+                <Feather name="arrow-left" size={24} color="#333" />
+              </TouchableOpacity>
+            ),
           }}
         />
         <View style={styles.loadingContainer}>
@@ -160,6 +165,11 @@ const CourseDetailsScreen = () => {
           options={{
             headerTitle: 'Course Details',
             headerShown: true,
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+                <Feather name="arrow-left" size={24} color="#333" />
+              </TouchableOpacity>
+            ),
           }}
         />
         <View style={styles.errorContainer}>
@@ -181,6 +191,11 @@ const CourseDetailsScreen = () => {
         options={{
           headerTitle: course.title,
           headerShown: true,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
+              <Feather name="arrow-left" size={24} color="#333" />
+            </TouchableOpacity>
+          ),
         }}
       />
       
@@ -459,6 +474,10 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 16,
     textAlign: 'center',
+  },
+  headerButton: {
+    padding: 8,
+    marginLeft: 8,
   },
 });
 
