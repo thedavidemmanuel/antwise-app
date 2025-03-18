@@ -1,5 +1,6 @@
 // services/TransactionService.ts
 import { supabase } from '@/lib/supabase';
+import { EmbeddingService } from '@/services/EmbeddingService';
 
 export interface Wallet {
   id: string;
@@ -313,6 +314,56 @@ export class TransactionService {
     } catch (error) {
       console.error('Error in getTransactionsByDateRange:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Create a transaction with automatic embedding generation
+   */
+  static async createTransaction(transaction: Partial<Transaction>): Promise<string | null> {
+    try {
+      if (!transaction.user_id) {
+        console.error('User ID is required for creating a transaction');
+        return null;
+      }
+
+      // Ensure the transaction date is set
+      if (!transaction.transaction_date) {
+        transaction.transaction_date = new Date().toISOString();
+      }
+
+      // Ensure created_at is set
+      if (!transaction.created_at) {
+        transaction.created_at = new Date().toISOString();
+      }
+
+      // Create the transaction record
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert(transaction)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating transaction:', error);
+        return null;
+      }
+
+      const transactionId = data.id;
+
+      // After successful creation, generate embedding asynchronously
+      if (transactionId) {
+        // Run embedding generation asynchronously
+        EmbeddingService.generateEmbeddingForTransaction(transactionId)
+          .catch(err => console.error('Error generating embedding:', err));
+        
+        return transactionId;
+      }
+
+      return null;
+    } catch (err) {
+      console.error('Error creating transaction:', err);
+      return null;
     }
   }
 
