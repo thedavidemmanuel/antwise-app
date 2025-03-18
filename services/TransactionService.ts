@@ -351,11 +351,12 @@ export class TransactionService {
 
       const transactionId = data.id;
 
-      // After successful creation, generate embedding asynchronously
+      // After successful creation, call the edge function instead of direct embedding
       if (transactionId) {
-        // Run embedding generation asynchronously
-        EmbeddingService.generateEmbeddingForTransaction(transactionId)
-          .catch(err => console.error('Error generating embedding:', err));
+        // Call Edge Function for embedding generation
+        supabase.functions.invoke('analyze-transactions', {
+          body: { transactionId, endpoint: 'generate-embedding' }
+        }).catch(err => console.error('Error calling embedding function:', err));
         
         return transactionId;
       }

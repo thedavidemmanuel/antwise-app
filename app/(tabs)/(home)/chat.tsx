@@ -5,10 +5,13 @@ import { Stack } from 'expo-router';
 import { useAIInsights } from '@/hooks/useAIInsights';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+// Development mode flag - set to false in production
+const DEV_MODE = __DEV__ && false;
+
 export default function ChatScreen() {
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState<Array<{type: 'user' | 'ai', content: string}>>([]);
-  const { insights, loading, error, fetchInsights } = useAIInsights();
+  const { insights, suggestions, loading, analyzing, error, debug, fetchInsights } = useAIInsights();
   const inputRef = useRef<TextInput>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -92,14 +95,50 @@ export default function ChatScreen() {
           </View>
         ) : (
           messages.map((message, index) => (
-            <View 
-              key={index} 
-              style={[
-                styles.messageContainer,
-                message.type === 'user' ? styles.userMessage : styles.aiMessage
-              ]}
-            >
-              <Text style={styles.messageText}>{message.content}</Text>
+            <View key={index}>
+              <View 
+                style={[
+                  styles.messageContainer,
+                  message.type === 'user' ? styles.userMessage : styles.aiMessage
+                ]}
+              >
+                <Text style={[
+                  styles.messageText,
+                  message.type === 'user' && styles.userMessageText
+                ]}>
+                  {message.content}
+                </Text>
+              </View>
+              
+              {/* Display suggestions after AI messages */}
+              {message.type === 'ai' && index === messages.length - 1 && suggestions && suggestions.length > 0 && (
+                <View style={styles.suggestionsContainer}>
+                  {suggestions.map((suggestion, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      style={styles.suggestionChip}
+                      onPress={() => {
+                        const newQuery = suggestion;
+                        setMessages(prev => [...prev, { type: 'user', content: newQuery }]);
+                        fetchInsights(newQuery);
+                      }}
+                    >
+                      <Text style={styles.suggestionText}>{suggestion}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              
+              {/* Debug info in development mode */}
+              {DEV_MODE && message.type === 'ai' && index === messages.length - 1 && debug && (
+                <View style={styles.debugContainer}>
+                  <Text style={styles.debugHeader}>Debug Info:</Text>
+                  <Text style={styles.debugText}>
+                    Query Type: {debug.classification?.queryType || 'unknown'}{'\n'}
+                    Transactions: {debug.transactionsCount || 0}
+                  </Text>
+                </View>
+              )}
             </View>
           ))
         )}
@@ -107,7 +146,9 @@ export default function ChatScreen() {
         {loading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#7C00FE" />
-            <Text style={styles.loadingText}>Analyzing your finances...</Text>
+            <Text style={styles.loadingText}>
+              {analyzing ? 'Analyzing your transactions...' : 'Thinking...'}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -245,5 +286,47 @@ const styles = StyleSheet.create({
   exampleText: {
     fontSize: 14,
     color: '#333333',
+  },
+  suggestionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    marginBottom: 16,
+    paddingLeft: 16,
+  },
+  suggestionChip: {
+    backgroundColor: '#F0F0F0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  suggestionText: {
+    fontSize: 14,
+    color: '#7C00FE',
+  },
+  userMessageText: {
+    color: '#FFFFFF',
+  },
+  debugContainer: {
+    padding: 12,
+    margin: 8,
+    backgroundColor: '#FFE8E8',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FFCACA',
+  },
+  debugHeader: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+    color: '#CC0000',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#333333',
+    fontFamily: 'monospace',
   },
 });

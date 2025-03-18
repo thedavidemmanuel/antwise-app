@@ -1,14 +1,28 @@
 import { supabase } from '@/lib/supabase';
 import OpenAI from 'openai';
 
-// Create OpenAI client
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Conditionally create OpenAI client only when API key is available
+let openai: OpenAI | null = null;
+try {
+  // Only initialize if we have an API key
+  if (typeof process !== 'undefined' && process.env && process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+} catch (err) {
+  console.log('OpenAI client initialization skipped (client environment)');
+}
 
 export class EmbeddingService {
   /**
    * Generate embeddings for a transaction and update the database
    */
   static async generateEmbeddingForTransaction(transactionId: string): Promise<boolean> {
+    // Skip if OpenAI client isn't available (client-side environment)
+    if (!openai) {
+      console.log('Embedding generation skipped - OpenAI client not available');
+      return false;
+    }
+    
     try {
       // Fetch the transaction
       const { data: transaction, error } = await supabase
@@ -53,6 +67,12 @@ export class EmbeddingService {
    * Generate embeddings for all transactions of a user
    */
   static async generateEmbeddingsForUser(userId: string): Promise<boolean> {
+    // Skip if OpenAI client isn't available (client-side environment)
+    if (!openai) {
+      console.log('Bulk embedding generation skipped - OpenAI client not available');
+      return false;
+    }
+    
     try {
       // Fetch transactions without embeddings
       const { data: transactions, error } = await supabase

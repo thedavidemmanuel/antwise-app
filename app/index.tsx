@@ -1,223 +1,219 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions, Platform, FlatList } from 'react-native';
-import { useRouter } from 'expo-router';
-import { markOnboardingSeen } from '@/lib/storage';
+// Updated handler with improved response handling
+Deno.serve(async (req) => {
+  try {
+    // Check URL path to handle different actions
+    const url = new URL(req.url);
+    
+    // Handle embedding generation endpoint
+    if (url.pathname.endsWith('/generate-embedding')) {
+      return await handleEmbeddingGeneration(req);
+    }
+    
+    // Original transaction analysis logic
+    const { userId, query } = await req.json();
 
-const { width, height } = Dimensions.get('window');
-const scale = Math.min(width / 375, height / 812);
-const scaledSize = (size: number) => size * scale;
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing userId in request' }),
+        { headers: { "Content-Type": "application/json" }, status: 400 }
+      );
+    }
 
-interface Slide {
-  id: string;
-  coloredWord: string;
-  title: string;
-  description: string;
-  image: any;
-}
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
 
-interface TitleProps {
-  coloredWord: string;
-  title: string;
-}
+    if (!openaiApiKey) {
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        { headers: { "Content-Type": "application/json" }, status: 500 }
+      );
+    }
 
-const slides: Slide[] = [
-  {
-    id: '1',
-    coloredWord: 'Grow',
-    title: 'your money',
-    description: 'Access thoughtfully curated features specifically tailored to help you manage your finances',
-    image: require('../assets/images/onboarding1.png'),
-  },
-  {
-    id: '2',
-    coloredWord: 'Shop',
-    title: 'Globally',
-    description: 'Wether you’re shopping online, paying tuition fees, subscibing to netflix, our USD card has you covered.',
-    image: require('../assets/images/onboarding2.png'),
-  },
-  {
-    id: '3',
-    coloredWord: 'Build Healthy',
-    title: 'Financial Habits',
-    description: 'Learn and develop smart money habits with AI budgeting, savings, and accountability tools.',
-    image: require('../assets/images/onboarding3.png'),
-  },
-];
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const openai = new OpenAI({ apiKey: openaiApiKey });
 
-// Update the Title component
-const Title = ({ coloredWord, title }: TitleProps) => {
-  const words = title.split(' ');
-  return (
-    <Text style={styles.title}>
-      <Text style={styles.coloredText}>{coloredWord}</Text>
-      <Text>{` ${words.join(' ')}`}</Text>
-    </Text>
-  );
-};
+    // STEP 1: Classify the query to determine what data we need
+    const classifierResponse = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are a financial query classifier. Your job is to determine:
+1. If a query requires transaction data (be more aggressive in requiring transaction data for financial questions)
+2. What type of query it is
+3. What time range of transactions might be needed (default to last 30 days if not specified)
+4. What filters should be applied to transactions
 
-export default function OnboardingScreen() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const router = useRouter();
+For queries about spending, expenses, budgeting, or analyzing financial behavior, you should classify them as requiring transactions.
 
-  // Handle navigation with onboarding completion
-  const handleSignIn = async () => {
-    await markOnboardingSeen();
-    router.replace("/(auth)/sign-in");
-  };
+Respond with a JSON object only, no other text.`
+        },
+        {
+          role: "user",
+          content: `Classify this financial assistant query: "${query}"`
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.1,
+    });
+    
+    // Parse the classification
+    let classification: QueryClassification;
+    try {
+      classification = JSON.parse(classifierResponse.choices[0].message.content) as QueryClassification;
+    } catch (e) {
+      console.error("Error parsing classifier response:", e);
+      classification = {
+        requiresTransactions: false,
+        queryType: 'general_financial'
+      };
+    }
 
-  const handleSignUp = async () => {
-    await markOnboardingSeen();
-    router.replace("/(auth)/sign-up");
-  };
+    // Set default time range if not specified but transactions are required
+    if (classification.requiresTransactions && !classification.timeRange) {
+      const endDate = new Date().toISOString();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30); // Default to last 30 days
+      classification.timeRange = {
+        startDate: startDate.toISOString(),
+        endDate: endDate
+      };
+    }
 
-  const renderSlide = ({ item }: { item: Slide }) => (
-    <View style={[styles.container, { width }]}>
-      <Image 
-        source={require('../assets/images/antwise-logo.png')} 
-        style={styles.logo} 
-        resizeMode="contain"
-      />
+    // STEP 2: Based on classification, fetch only the necessary data
+    let transactions = [];
+    let transactionFetchError = null;
+    
+    if (classification.requiresTransactions) {
+      try {
+        let query = supabase
+          .from('transactions')
+          .select('*')
+          .eq('user_id', userId);
+        
+        // Apply time range if specified
+        if (classification.timeRange?.startDate) {
+          query = query.gte('transaction_date', classification.timeRange.startDate);
+        }
+        if (classification.timeRange?.endDate) {
+          query = query.lte('transaction_date', classification.timeRange.endDate);
+        }
+        
+        // Apply filters if specified
+        if (classification.filters?.category) {
+          query = query.ilike('category', `%${classification.filters.category}%`);
+        }
+        if (classification.filters?.merchant) {
+          query = query.ilike('merchant', `%${classification.filters.merchant}%`);
+        }
+        if (classification.filters?.amount?.min) {
+          query = query.gte('amount', classification.filters.amount.min);
+        }
+        if (classification.filters?.amount?.max) {
+          query = query.lte('amount', classification.filters.amount.max);
+        }
+        
+        // Order by transaction date, most recent first
+        query = query.order('transaction_date', { ascending: false });
+        
+        // Limit to a reasonable number for non-specific queries
+        if (classification.queryType !== 'transaction_analysis') {
+          query = query.limit(50); // Increased from 20 to get more data
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          console.error('Error fetching filtered transactions:', error);
+          transactionFetchError = error.message;
+        } else {
+          transactions = data || [];
+        }
+      } catch (err) {
+        console.error('Exception fetching transactions:', err);
+        transactionFetchError = err instanceof Error ? err.message : String(err);
+      }
+    }
 
-      <Title coloredWord={item.coloredWord} title={item.title} />
-
-      <View style={styles.imageContainer}>
-        <Image 
-          source={item.image} 
-          style={styles.image}
-          resizeMode="contain" 
-        />
-      </View>
-
-      <Text style={styles.description}>{item.description}</Text>
-
-      <View style={styles.dotContainer}>
-        {slides.map((_, index) => (
-          <View
-            key={index}
-            style={[
-              styles.dot,
-              { backgroundColor: index === currentIndex ? '#7C00FE' : '#E5E5E5' }
-            ]}
-          />
-        ))}
-      </View>
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={styles.signInButton}
-          onPress={handleSignIn}
-        >
-          <Text style={styles.signInText}>Sign In</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={styles.signUpButton}
-          onPress={handleSignUp}
-        >
-          <Text style={styles.signUpText}>Sign Up</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
-  return (
-    <FlatList
-      data={slides}
-      renderItem={renderSlide}
-      horizontal
-      pagingEnabled
-      showsHorizontalScrollIndicator={false}
-      onMomentumScrollEnd={(e) => {
-        const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
-        setCurrentIndex(newIndex);
-      }}
-    />
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    paddingTop: scaledSize(30),
-  },
-  logo: {
-    width: scaledSize(220),
-    height: scaledSize(70),
-    marginBottom: scaledSize(30),
-  },
-  title: {
-    fontSize: scaledSize(16),
-    color: '#000000',
-    marginBottom: scaledSize(20),
-    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Inter-SemiBold',
-  },
-  coloredText: {
-    color: '#7C00FE',
-  },
-  imageContainer: {
-    width: width * 0.85,
-    aspectRatio: 1,
-    backgroundColor: 'rgba(124, 0, 254, 0.1)',
-    borderRadius: scaledSize(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaledSize(30),
-  },
-  image: {
-    width: '90%',
-    height: '90%',
-  },
-  description: {
-    fontSize: scaledSize(12),
-    color: '#000000',
-    textAlign: 'center',
-    width: width * 0.9,
-    lineHeight: scaledSize(15),
-    marginBottom: scaledSize(20),
-    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Inter-Regular',
-  },
-  dotContainer: {
-    flexDirection: 'row',
-    marginBottom: scaledSize(30),
-  },
-  dot: {
-    width: scaledSize(19),
-    height: scaledSize(10),
-    borderRadius: scaledSize(5),
-    marginHorizontal: scaledSize(5),
-  },
-  buttonContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  signInButton: {
-    width: width * 0.7,
-    height: scaledSize(44),
-    backgroundColor: '#7C00FE',
-    borderRadius: scaledSize(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: scaledSize(15),
-  },
-  signInText: {
-    color: '#FFFFFF',
-    fontSize: scaledSize(18),
-    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Inter-Regular',
-  },
-  signUpButton: {
-    width: width * 0.7,
-    height: scaledSize(44),
-    borderWidth: 2,
-    borderColor: '#7C00FE',
-    borderRadius: scaledSize(20),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  signUpText: {
-    color: '#7C00FE',
-    fontSize: scaledSize(18),
-    fontFamily: Platform.OS === 'ios' ? 'Inter' : 'Inter-Regular',
-  },
-});
+    // STEP 3: Generate appropriate response based on query type and available data
+    const systemPrompts = {
+      greeting: "You are a friendly financial assistant. Respond to the user's greeting warmly.",
+      general_financial: "You are a knowledgeable financial advisor. Provide helpful financial advice based on the query.",
+      transaction_analysis: "You are a detailed financial analyst. Analyze the provided transactions and answer the user's specific question. If no transactions are available, explain how you could help if they had transaction data and suggest next steps.",
+      account_info: "You are a helpful account manager. Provide information about the user's account based on available data."
+    };
+    
+    const systemPrompt = systemPrompts[classification.queryType] || systemPrompts.general_financial;
+    
+    // Add instructions for handling missing transactions
+    let enhancedSystemPrompt = systemPrompt;
+    if (classification.requiresTransactions) {
+      enhancedSystemPrompt += `\n\nIf transaction data is available, provide specific insights based on their actual spending patterns. If no transactions are available or if there's an error accessing them, explain what insights you could provide with transaction data and suggest ways the user can start tracking their finances. Always be helpful and provide actionable advice regardless of data availability.`;
+    }
+    
+    // Prepare the content for the user message
+    let userMessageContent = '';
+    
+    // Add context about transactions or lack thereof
+    if (classification.requiresTransactions) {
+      if (transactionFetchError) {
+        userMessageContent = `I tried to analyze your transactions but encountered an error: ${transactionFetchError}. \n\nUser query: ${query}`;
+      } else if (transactions.length > 0) {
+        userMessageContent = `I found ${transactions.length} transactions that might be relevant to your question. Here they are: ${JSON.stringify(transactions)}\n\nUser query: ${query}`;
+      } else {
+        userMessageContent = `I couldn't find any transactions that match your criteria. This might be because you haven't added any transactions yet, or because they don't match the filters needed for your question.\n\nUser query: ${query}`;
+      }
+    } else {
+      userMessageContent = query;
+    }
+    
+    // Generate the final response with structured JSON format
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `${enhancedSystemPrompt} Provide your response as a JSON object with a 'message' field for the main response. Do not use markdown formatting - your message will be displayed as plain text. Optionally include a 'suggestions' array with 2-3 follow-up questions the user might want to ask.`
+        },
+        {
+          role: "user",
+          content: userMessageContent
+        }
+      ],
+      response_format: { type: "json_object" },  // Force structured JSON response
+      temperature: 0.7,
+      max_tokens: 800
+    });
+    
+    // Parse the JSON response with error handling
+    let responseData: AIResponse;
+    try {
+      responseData = JSON.parse(completion.choices[0].message.content);
+    } catch (e) {
+      console.error("Error parsing JSON response:", e);
+      responseData = { 
+        message: "I'm having trouble processing your request. Could you try asking in a different way?" 
+      };
+    }
+    
+    return new Response(
+      JSON.stringify({ 
+        insights: responseData.message,
+        suggestions: responseData.suggestions || [],  // Include follow-up suggestions
+        debug: {
+          classification,
+          transactionsCount: transactions.length,
+          hasError: !!transactionFetchError
+        }
+      }),
+      { headers: { "Content-Type": "application/json" }, status: 200 }
+    );
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    return new Response(
+      JSON.stringify({ error: 'An unexpected error occurred', details: err instanceof Error ? err.message : String(err) }),
+      { headers: { "Content-Type": "application/json" }, status: 500 }
+    );
+  }
+})
