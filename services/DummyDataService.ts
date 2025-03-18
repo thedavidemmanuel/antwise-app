@@ -33,9 +33,6 @@ export class DummyDataService {
     try {
       console.log('Generating dummy data for new user:', userId);
       
-      const now = new Date(); // Current date/time
-      const signupDate = new Date(now.getTime()); // Use as reference for transaction dates
-      
       // Step 1: Create a wallet first with zero balance
       const { data: wallet, error: walletError } = await supabase
         .from('wallets')
@@ -46,8 +43,8 @@ export class DummyDataService {
           currency: 'RWF',
           is_locked: false,
           color: '#7C00FE',
-          created_at: now.toISOString(),
-          updated_at: now.toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -62,12 +59,10 @@ export class DummyDataService {
       let currentBalance = 0;
       const walletHistoryRecords: WalletHistoryRecord[] = [];
       
-      // Calculate dates for the past two months - ensuring they're before signup
-      const currentMonth = new Date(signupDate);
-      currentMonth.setDate(1); // Set to 1st of current month
-      
-      const lastMonth = new Date(currentMonth);
-      lastMonth.setMonth(lastMonth.getMonth() - 1); // Previous month
+      // Calculate dates for the past two months
+      const today = new Date();
+      const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
       
       // Names for money transfers
       const senderNames = ['Ali Mutijima', 'Tito Paris', 'Jeff Dauda'];
@@ -75,429 +70,371 @@ export class DummyDataService {
       // Supermarkets
       const supermarkets = ['Simba Supermarket', '250 Stores', 'Horebu Supermarket'];
       
-      // Time boundary - ensure all transactions are before this time
-      const timeBoundary = new Date(signupDate);
-      timeBoundary.setHours(0, 0, 0, 0); // Beginning of signup day
-      
-      // Safe date generation helper function
-      const generateSafeDate = (monthStart: Date, monthEnd: Date, targetDay: number): Date => {
-        // Create a date at the targetDay of the month
-        const date = new Date(monthStart);
-        // Ensure day is within valid range for the month
-        const safeDay = Math.min(targetDay, monthEnd.getDate());
-        date.setDate(safeDay);
-        
-        // Final safety check - ensure date is valid and in the past
-        if (date > timeBoundary) {
-          // If still in future, use month start
-          return new Date(monthStart);
-        }
-        return date;
-      };
-      
       // Process for each of the last two months
       [lastMonth, currentMonth].forEach((monthStart, monthIndex) => {
         const month = monthStart.toLocaleString('default', { month: 'long' });
-        
-        // Calculate month end, making sure it's not in the future
         const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
-        if (monthEnd > timeBoundary) {
-          // If month end is after boundary, use boundary instead
-          monthEnd.setTime(timeBoundary.getTime());
+        
+        // 1. Add monthly salary/income at the beginning of month
+        const salaryAmount = 350000 + Math.floor(Math.random() * 50000); // 350k-400k RWF
+        const salaryDate = new Date(monthStart);
+        salaryDate.setDate(2); // Income on 2nd day of month
+        
+        // Random selection of sender name
+        const senderName = senderNames[Math.floor(Math.random() * senderNames.length)];
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'income',
+          amount: salaryAmount,
+          currency: 'RWF',
+          merchant: senderName,
+          category: 'Income',
+          description: `Monthly salary from ${senderName}`,
+          transaction_date: salaryDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance += salaryAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: salaryAmount,
+          transaction_type: 'income',
+          timestamp: salaryDate.toISOString(),
+        });
+        
+        // 2. Add recurring bills
+        
+        // Rent (usually beginning of month)
+        const rentDate = new Date(monthStart);
+        rentDate.setDate(4);
+        const rentAmount = 120000; // 120k RWF
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'expense',
+          amount: rentAmount,
+          currency: 'RWF',
+          merchant: 'Monthly Rent',
+          category: 'Rent',
+          description: `${month} rent payment`,
+          transaction_date: rentDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance -= rentAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: -rentAmount,
+          transaction_type: 'expense',
+          timestamp: rentDate.toISOString(),
+        });
+        
+        // Electricity bill (mid-month)
+        const electricityDate = new Date(monthStart);
+        electricityDate.setDate(15);
+        const electricityAmount = 20000 + Math.floor(Math.random() * 8000); // 20k-28k RWF
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'expense',
+          amount: electricityAmount,
+          currency: 'RWF',
+          merchant: 'REG Rwanda Energy',
+          category: 'Utilities',
+          description: `${month} electricity bill`,
+          transaction_date: electricityDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance -= electricityAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: -electricityAmount,
+          transaction_type: 'expense',
+          timestamp: electricityDate.toISOString(),
+        });
+        
+        // Water bill (around 20th)
+        const waterDate = new Date(monthStart);
+        waterDate.setDate(20);
+        const waterAmount = 15000 + Math.floor(Math.random() * 5000); // 15k-20k RWF
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'expense',
+          amount: waterAmount,
+          currency: 'RWF',
+          merchant: 'WASAC Water',
+          category: 'Utilities',
+          description: `${month} water bill`,
+          transaction_date: waterDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance -= waterAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: -waterAmount,
+          transaction_type: 'expense',
+          timestamp: waterDate.toISOString(),
+        });
+        
+        // 3. Subscriptions
+        
+        // Netflix subscription (beginning of month)
+        const netflixDate = new Date(monthStart);
+        netflixDate.setDate(3);
+        const netflixAmount = 12000; // 12k RWF
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'expense',
+          amount: netflixAmount,
+          currency: 'RWF',
+          merchant: 'Netflix',
+          category: 'Subscription',
+          description: `${month} Netflix subscription`,
+          transaction_date: netflixDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance -= netflixAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: -netflixAmount,
+          transaction_type: 'expense',
+          timestamp: netflixDate.toISOString(),
+        });
+        
+        // Spotify subscription
+        const spotifyDate = new Date(monthStart);
+        spotifyDate.setDate(7);
+        const spotifyAmount = 9000; // 9k RWF
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'expense',
+          amount: spotifyAmount,
+          currency: 'RWF',
+          merchant: 'Spotify',
+          category: 'Subscription',
+          description: `${month} Spotify Premium`,
+          transaction_date: spotifyDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance -= spotifyAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: -spotifyAmount,
+          transaction_type: 'expense',
+          timestamp: spotifyDate.toISOString(),
+        });
+        
+        // OpenAI ChatGPT
+        const chatgptDate = new Date(monthStart);
+        chatgptDate.setDate(10);
+        const chatgptAmount = 20000; // 20k RWF
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'expense',
+          amount: chatgptAmount,
+          currency: 'RWF',
+          merchant: 'OpenAI ChatGPT',
+          category: 'Subscription',
+          description: `${month} ChatGPT Plus subscription`,
+          transaction_date: chatgptDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance -= chatgptAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: -chatgptAmount,
+          transaction_type: 'expense',
+          timestamp: chatgptDate.toISOString(),
+        });
+        
+        // 4. Vuba Vuba (food delivery) - twice per month
+        for (let i = 0; i < 2; i++) {
+          const vubaDate = new Date(monthStart);
+          vubaDate.setDate(8 + (i * 12)); // Day 8 and 20
+          const vubaAmount = 15000 + Math.floor(Math.random() * 10000); // 15k-25k RWF
+          
+          transactions.push({
+            user_id: userId,
+            wallet_id: wallet.id,
+            type: 'expense',
+            amount: vubaAmount,
+            currency: 'RWF',
+            merchant: 'Vuba Vuba',
+            category: 'Dining',
+            description: `Food delivery ${i === 0 ? 'lunch' : 'dinner'}`,
+            transaction_date: vubaDate.toISOString(),
+            created_at: new Date().toISOString()
+          });
+          
+          currentBalance -= vubaAmount;
+          walletHistoryRecords.push({
+            user_id: userId,
+            wallet_id: wallet.id,
+            balance: currentBalance,
+            changed_amount: -vubaAmount,
+            transaction_type: 'expense',
+            timestamp: vubaDate.toISOString(),
+          });
         }
         
-        // Only proceed if we have some days to work with
-        if (monthEnd >= monthStart) {
-          // 1. Add monthly salary/income at the beginning of month
-          const salaryAmount = 350000 + Math.floor(Math.random() * 50000); // 350k-400k RWF
-          const salaryDate = generateSafeDate(monthStart, monthEnd, 2); // Target 2nd day of month
+        // 5. Supermarket purchase
+        const supermarket = supermarkets[Math.floor(Math.random() * supermarkets.length)];
+        const supermarketDate = new Date(monthStart);
+        supermarketDate.setDate(12);
+        const supermarketAmount = 35000 + Math.floor(Math.random() * 15000); // 35k-50k RWF
+        
+        transactions.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          type: 'expense',
+          amount: supermarketAmount,
+          currency: 'RWF',
+          merchant: supermarket,
+          category: 'Shopping',
+          description: `${month} grocery shopping`,
+          transaction_date: supermarketDate.toISOString(),
+          created_at: new Date().toISOString()
+        });
+        
+        currentBalance -= supermarketAmount;
+        walletHistoryRecords.push({
+          user_id: userId,
+          wallet_id: wallet.id,
+          balance: currentBalance,
+          changed_amount: -supermarketAmount,
+          transaction_type: 'expense',
+          timestamp: supermarketDate.toISOString(),
+        });
+        
+        // 6. Additional random transactions to reach 15 per month
+        const remainingTransactionsCount = 15 - 8; // 8 transactions already added
+        
+        for (let i = 0; i < remainingTransactionsCount; i++) {
+          // For the last transaction of the second month, ensure we zero out the balance
+          const isLastTransaction = monthIndex === 1 && i === remainingTransactionsCount - 1;
           
-          // Random selection of sender name
-          const senderName = senderNames[Math.floor(Math.random() * senderNames.length)];
+          let type: 'income' | 'expense';
+          let amount: number;
+          let merchant: string;
+          let category: string;
+          let description: string;
           
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'income',
-            amount: salaryAmount,
-            currency: 'RWF',
-            merchant: senderName,
-            category: 'Income',
-            description: `Monthly salary from ${senderName}`,
-            transaction_date: salaryDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance += salaryAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: salaryAmount,
-            transaction_type: 'income',
-            timestamp: salaryDate.toISOString(),
-          });
-          
-          // 2. Add recurring bills
-          
-          // Rent (usually beginning of month)
-          const rentDate = generateSafeDate(monthStart, monthEnd, 4);
-          const rentAmount = 120000; // 120k RWF
-          
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'expense',
-            amount: rentAmount,
-            currency: 'RWF',
-            merchant: 'Monthly Rent',
-            category: 'Rent',
-            description: `${month} rent payment`,
-            transaction_date: rentDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance -= rentAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: -rentAmount,
-            transaction_type: 'expense',
-            timestamp: rentDate.toISOString(),
-          });
-          
-          // Electricity bill (mid-month)
-          const electricityDate = generateSafeDate(monthStart, monthEnd, 15);
-          const electricityAmount = 20000 + Math.floor(Math.random() * 8000); // 20k-28k RWF
-          
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'expense',
-            amount: electricityAmount,
-            currency: 'RWF',
-            merchant: 'REG Rwanda Energy',
-            category: 'Utilities',
-            description: `${month} electricity bill`,
-            transaction_date: electricityDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance -= electricityAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: -electricityAmount,
-            transaction_type: 'expense',
-            timestamp: electricityDate.toISOString(),
-          });
-          
-          // Water bill (around 20th)
-          const waterDate = generateSafeDate(monthStart, monthEnd, 20);
-          const waterAmount = 15000 + Math.floor(Math.random() * 5000); // 15k-20k RWF
-          
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'expense',
-            amount: waterAmount,
-            currency: 'RWF',
-            merchant: 'WASAC Water',
-            category: 'Utilities',
-            description: `${month} water bill`,
-            transaction_date: waterDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance -= waterAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: -waterAmount,
-            transaction_type: 'expense',
-            timestamp: waterDate.toISOString(),
-          });
-          
-          // 3. Subscriptions
-          
-          // Netflix subscription (beginning of month)
-          const netflixDate = generateSafeDate(monthStart, monthEnd, 3);
-          const netflixAmount = 12000; // 12k RWF
-          
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'expense',
-            amount: netflixAmount,
-            currency: 'RWF',
-            merchant: 'Netflix',
-            category: 'Subscription',
-            description: `${month} Netflix subscription`,
-            transaction_date: netflixDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance -= netflixAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: -netflixAmount,
-            transaction_type: 'expense',
-            timestamp: netflixDate.toISOString(),
-          });
-          
-          // Spotify subscription
-          const spotifyDate = generateSafeDate(monthStart, monthEnd, 7);
-          const spotifyAmount = 9000; // 9k RWF
-          
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'expense',
-            amount: spotifyAmount,
-            currency: 'RWF',
-            merchant: 'Spotify',
-            category: 'Subscription',
-            description: `${month} Spotify Premium`,
-            transaction_date: spotifyDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance -= spotifyAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: -spotifyAmount,
-            transaction_type: 'expense',
-            timestamp: spotifyDate.toISOString(),
-          });
-          
-          // OpenAI ChatGPT
-          const chatgptDate = generateSafeDate(monthStart, monthEnd, 10);
-          const chatgptAmount = 20000; // 20k RWF
-          
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'expense',
-            amount: chatgptAmount,
-            currency: 'RWF',
-            merchant: 'OpenAI ChatGPT',
-            category: 'Subscription',
-            description: `${month} ChatGPT Plus subscription`,
-            transaction_date: chatgptDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance -= chatgptAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: -chatgptAmount,
-            transaction_type: 'expense',
-            timestamp: chatgptDate.toISOString(),
-          });
-          
-          // 4. Vuba Vuba (food delivery) - twice per month
-          for (let i = 0; i < 2; i++) {
-            const vubaDay = 8 + (i * 12); // Day 8 and 20
-            const vubaDate = generateSafeDate(monthStart, monthEnd, vubaDay);
-            const vubaAmount = 15000 + Math.floor(Math.random() * 10000); // 15k-25k RWF
-            
-            transactions.push({
-              user_id: userId,
-              wallet_id: wallet.id,
-              type: 'expense',
-              amount: vubaAmount,
-              currency: 'RWF',
-              merchant: 'Vuba Vuba',
-              category: 'Dining',
-              description: `Food delivery ${i === 0 ? 'lunch' : 'dinner'}`,
-              transaction_date: vubaDate.toISOString(),
-              created_at: now.toISOString()
-            });
-            
-            currentBalance -= vubaAmount;
-            walletHistoryRecords.push({
-              user_id: userId,
-              wallet_id: wallet.id,
-              balance: currentBalance,
-              changed_amount: -vubaAmount,
-              transaction_type: 'expense',
-              timestamp: vubaDate.toISOString(),
-            });
-          }
-          
-          // 5. Supermarket purchase
-          const supermarket = supermarkets[Math.floor(Math.random() * supermarkets.length)];
-          const supermarketDate = generateSafeDate(monthStart, monthEnd, 12);
-          const supermarketAmount = 35000 + Math.floor(Math.random() * 15000); // 35k-50k RWF
-          
-          transactions.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            type: 'expense',
-            amount: supermarketAmount,
-            currency: 'RWF',
-            merchant: supermarket,
-            category: 'Shopping',
-            description: `${month} grocery shopping`,
-            transaction_date: supermarketDate.toISOString(),
-            created_at: now.toISOString()
-          });
-          
-          currentBalance -= supermarketAmount;
-          walletHistoryRecords.push({
-            user_id: userId,
-            wallet_id: wallet.id,
-            balance: currentBalance,
-            changed_amount: -supermarketAmount,
-            transaction_type: 'expense',
-            timestamp: supermarketDate.toISOString(),
-          });
-          
-          // 6. Additional random transactions to reach 15 per month
-          const remainingTransactionsCount = 15 - 8; // 8 transactions already added
-          
-          for (let i = 0; i < remainingTransactionsCount; i++) {
-            // For the last transaction of the second month, ensure we zero out the balance
-            const isLastTransaction = monthIndex === 1 && i === remainingTransactionsCount - 1;
-            
-            let type: 'income' | 'expense';
-            let amount: number;
-            let merchant: string;
-            let category: string;
-            let description: string;
-            
-            if (isLastTransaction) {
-              // Make the final transaction balance to zero
-              if (currentBalance > 0) {
-                type = 'expense';
-                amount = currentBalance;
-                merchant = 'Bank Transfer';
-                category = 'Transfer';
-                description = 'Bank savings transfer';
-              } else {
-                // This shouldn't happen with our logic, but just in case
-                type = 'income';
-                amount = Math.abs(currentBalance);
-                merchant = senderNames[Math.floor(Math.random() * senderNames.length)];
-                category = 'Transfer';
-                description = `Money received from ${merchant}`;
-              }
+          if (isLastTransaction) {
+            // Make the final transaction balance to zero
+            if (currentBalance > 0) {
+              type = 'expense';
+              amount = currentBalance;
+              merchant = 'Bank Transfer';
+              category = 'Transfer';
+              description = 'Bank savings transfer';
             } else {
-              // Random transaction
-              const categories = ['Transfer', 'Shopping', 'Dining', 'Entertainment', 'Transportation'];
-              category = categories[Math.floor(Math.random() * categories.length)];
+              // This shouldn't happen with our logic, but just in case
+              type = 'income';
+              amount = Math.abs(currentBalance);
+              merchant = senderNames[Math.floor(Math.random() * senderNames.length)];
+              category = 'Transfer';
+              description = `Money received from ${merchant}`;
+            }
+          } else {
+            // Random transaction
+            const categories = ['Transfer', 'Shopping', 'Dining', 'Entertainment', 'Transportation'];
+            category = categories[Math.floor(Math.random() * categories.length)];
+            
+            if (Math.random() > 0.7) { // 30% chance of income
+              type = 'income';
+              amount = 5000 + Math.floor(Math.random() * 30000); // 5k-35k RWF
+              merchant = senderNames[Math.floor(Math.random() * senderNames.length)];
+              description = `Money received from ${merchant}`;
+            } else {
+              type = 'expense';
+              amount = 3000 + Math.floor(Math.random() * 20000); // 3k-23k RWF
               
-              if (Math.random() > 0.7) { // 30% chance of income
-                type = 'income';
-                amount = 5000 + Math.floor(Math.random() * 30000); // 5k-35k RWF
-                merchant = senderNames[Math.floor(Math.random() * senderNames.length)];
-                description = `Money received from ${merchant}`;
+              if (category === 'Shopping') {
+                merchant = supermarkets[Math.floor(Math.random() * supermarkets.length)];
+                description = 'Shopping';
+              } else if (category === 'Dining') {
+                const restaurants = ['Soko Restaurant', 'Mariott Restaurant', 'CasaKeza'];
+                merchant = restaurants[Math.floor(Math.random() * restaurants.length)];
+                description = 'Meal at restaurant';
+              } else if (category === 'Transportation') {
+                merchant = 'Yego Cab';
+                description = 'Taxi ride';
               } else {
-                type = 'expense';
-                amount = 3000 + Math.floor(Math.random() * 20000); // 3k-23k RWF
-                
-                if (category === 'Shopping') {
-                  merchant = supermarkets[Math.floor(Math.random() * supermarkets.length)];
-                  description = 'Shopping';
-                } else if (category === 'Dining') {
-                  const restaurants = ['Soko Restaurant', 'Mariott Restaurant', 'CasaKeza'];
-                  merchant = restaurants[Math.floor(Math.random() * restaurants.length)];
-                  description = 'Meal at restaurant';
-                } else if (category === 'Transportation') {
-                  merchant = 'Yego Cab';
-                  description = 'Taxi ride';
-                } else {
-                  merchant = 'Miscellaneous';
-                  description = `${category} expense`;
-                }
+                merchant = 'Miscellaneous';
+                description = `${category} expense`;
               }
             }
-            
-            // Generate a random safe date within the month
-            const randomDay = Math.floor(Math.random() * (monthEnd.getDate() - monthStart.getDate() + 1)) + monthStart.getDate();
-            const transactionDate = generateSafeDate(monthStart, monthEnd, randomDay);
-            
-            transactions.push({
-              user_id: userId,
-              wallet_id: wallet.id,
-              type,
-              amount,
-              currency: 'RWF',
-              merchant,
-              category,
-              description,
-              transaction_date: transactionDate.toISOString(),
-              created_at: now.toISOString()
-            });
-            
-            currentBalance += (type === 'income' ? amount : -amount);
-            walletHistoryRecords.push({
-              user_id: userId,
-              wallet_id: wallet.id,
-              balance: currentBalance,
-              changed_amount: type === 'income' ? amount : -amount,
-              transaction_type: type,
-              timestamp: transactionDate.toISOString(),
-            });
           }
+          
+          // Generate a random date within the month
+          const transactionDate = new Date(monthStart);
+          transactionDate.setDate(Math.floor(Math.random() * (monthEnd.getDate() - monthStart.getDate() + 1)) + monthStart.getDate());
+          
+          transactions.push({
+            user_id: userId,
+            wallet_id: wallet.id,
+            type,
+            amount,
+            currency: 'RWF',
+            merchant,
+            category,
+            description,
+            transaction_date: transactionDate.toISOString(),
+            created_at: new Date().toISOString()
+          });
+          
+          currentBalance += (type === 'income' ? amount : -amount);
+          walletHistoryRecords.push({
+            user_id: userId,
+            wallet_id: wallet.id,
+            balance: currentBalance,
+            changed_amount: type === 'income' ? amount : -amount,
+            transaction_type: type,
+            timestamp: transactionDate.toISOString(),
+          });
         }
       });
       
-      // Before insertion, add a validation step to ensure all transaction dates are valid
-      const validTransactions = transactions.filter(tx => {
-        try {
-          // Perform validation checks
-          if (!tx.transaction_date) {
-            console.error('Missing transaction_date, skipping:', tx);
-            return false;
-          }
-          
-          // Parse the date to verify it's valid
-          const txDate = new Date(tx.transaction_date);
-          if (isNaN(txDate.getTime())) {
-            console.error('Invalid transaction_date:', tx.transaction_date);
-            return false;
-          }
-          
-          // Check if date is in the future
-          if (txDate > now) {
-            console.error('Future transaction_date detected:', tx.transaction_date);
-            return false;
-          }
-          
-          return true;
-        } catch (e) {
-          console.error('Error validating transaction:', e, tx);
-          return false;
-        }
-      });
-      
-      // Log validation results
-      console.log(`Validated ${validTransactions.length} of ${transactions.length} transactions`);
-      
-      if (validTransactions.length === 0) {
-        console.error('No valid transactions to insert');
-        return false;
-      }
-      
-      // Sort valid transactions by date
-      validTransactions.sort((a: Transaction, b: Transaction) => 
+      // Sort transactions by date
+      transactions.sort((a: Transaction, b: Transaction) => 
         new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime()
       );
       
       // Insert all transactions at once
       const { error: txError } = await supabase
         .from('transactions')
-        .insert(validTransactions);
+        .insert(transactions);
       
       if (txError) {
         console.error('Error creating transactions:', txError);
@@ -554,7 +491,7 @@ export class DummyDataService {
       // Finally update the wallet balance
       const { error: updateError } = await supabase
         .from('wallets')
-        .update({ balance: currentBalance, updated_at: now.toISOString() })
+        .update({ balance: currentBalance, updated_at: new Date().toISOString() })
         .eq('id', wallet.id);
       
       if (updateError) {

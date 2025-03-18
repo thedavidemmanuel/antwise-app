@@ -71,23 +71,30 @@ const customStorage = {
 
 // Enhanced fetch with timeout
 const enhancedFetch = (...args: Parameters<typeof fetch>) => {
-  if (DEBUG) console.log(`Fetching: ${args[0]}`);
+  const url = typeof args[0] === 'string' ? args[0] : 'Request object';
+  if (DEBUG) console.log(`Fetching: ${url}`);
   
   return new Promise<Response>((resolve, reject) => {
-    // Set a timeout for the request (15 seconds)
+    // Increase timeout to 30 seconds for larger operations
     const timeoutId = setTimeout(() => {
-      if (DEBUG) console.error('Fetch timeout exceeded (15s)');
+      if (DEBUG) console.error('Fetch timeout exceeded (30s)');
       reject(new Error('Request timeout'));
-    }, 15000);
+    }, 30000);
     
     fetch(...args)
       .then(response => {
         clearTimeout(timeoutId);
+        
+        // Log response status
+        if (DEBUG && url.includes('/rest/v1/transactions')) {
+          console.log(`Transaction API response: ${response.status} ${response.statusText}`);
+        }
+        
         resolve(response);
       })
       .catch(error => {
         clearTimeout(timeoutId);
-        console.error('Fetch error:', error);
+        console.error(`Fetch error for ${url}:`, error);
         reject(error);
       });
   });
@@ -114,6 +121,66 @@ export const supabase = createClient(
   }
 );
 
+// Create a wrapper function for database operations that logs details
+export const monitoredInsert = async (tableName: string, data: any, options: Record<string, any> = {}) => {
+  console.log(`Starting insert to ${tableName} with ${Array.isArray(data) ? data.length : 1} records`);
+  
+  // For transactions table, log transaction_date values
+  if (tableName === 'transactions' && Array.isArray(data)) {
+    const problematicRecords = data.filter(item => !item.transaction_date);
+    if (problematicRecords.length > 0) {
+      console.warn(`Found ${problematicRecords.length} records with missing transaction_date`);
+      console.warn('First problematic record:', JSON.stringify(problematicRecords[0], null, 2));
+    }
+    
+    // Log a sample of the data being inserted
+    if (data.length > 0) {
+      console.log('Sample transaction data:', JSON.stringify({
+        ...data[0],
+        created_at: data[0].created_at ? new Date(data[0].created_at).toISOString() : null,
+        transaction_date: data[0].transaction_date ? new Date(data[0].transaction_date).toISOString() : null
+      }, null, 2));
+    }
+  }
+
+  try {
+    // Increase timeout for large transaction batches
+    const startTime = Date.now();
+    const result = await Promise.race([
+      supabase.from(tableName).insert(data, options),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error(`Operation timed out after 30s for ${tableName}`)), 30000)
+      )
+    ]);
+    
+    const duration = Date.now() - startTime;
+    console.log(`Completed ${tableName} insert in ${duration}ms`);
+    
+    return result;
+  } catch (error: unknown) {
+    console.error(`Error in ${tableName} insert:`, error);
+    
+    // For transaction date errors, try to fix the data
+    if (error instanceof Error && 
+        error.message && 
+        error.message.includes('transaction_date') && 
+        Array.isArray(data)) {
+      console.log('Attempting to fix transaction_date values...');
+      
+      // Ensure all records have a transaction_date
+      const fixedData = data.map(item => ({
+        ...item,
+        transaction_date: item.transaction_date || new Date().toISOString()
+      }));
+      
+      console.log('Retrying with fixed transaction_date values...');
+      return supabase.from(tableName).insert(fixedData, options);
+    }
+    
+    throw error;
+  }
+};
+
 // Test the Supabase connection
 export const testSupabaseConnection = async () => {
   try {
@@ -139,4 +206,4 @@ export const testSupabaseConnection = async () => {
 testSupabaseConnection();
 
 // Define the redirect URL for use in auth operations
-export const REDIRECT_URL = 'antwiseapp://auth/confirm';
+export const REDIRECT_URL = 'https://www.antwise.app'

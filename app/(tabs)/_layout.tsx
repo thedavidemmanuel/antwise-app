@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHouse, faPiggyBank, faCreditCard, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faHouse, faPiggyBank, faCreditCard, faGraduationCap } from '@fortawesome/free-solid-svg-icons';
 import { Grip } from 'lucide-react-native';
 import { Redirect } from 'expo-router';
 import { useSession } from '../_layout';
@@ -57,7 +57,7 @@ export default function TabsLayout() {
         name="(learn)"
         options={{
           title: 'Learn',
-          tabBarIcon: ({ color }) => <FontAwesomeIcon icon={faChartLine} color={color} size={24} />,
+          tabBarIcon: ({ color }) => <FontAwesomeIcon icon={faGraduationCap} color={color} size={24} />,
         }}
       />
       <Tabs.Screen
